@@ -1,5 +1,6 @@
 package com.revature;
 
+import java.time.LocalDate;
 import java.util.Scanner;
 
 import com.revature.beans.User;
@@ -36,12 +37,48 @@ public class Menu {
 		System.out.println("Vacationeer!\n"
 				+ "1: Register for a new account\n"
 				+ "2: Login\n"
-				+ "3: Quit\n");
+				+ "3: Quit");
 		return scan.nextLine().trim();
 	}
 
 	private void register() {
 		// Takes input and registers user with a request based on that input
+		User u = new User();
+		System.out.println("Choose a username:");
+		u.setUsername(scan.nextLine().trim());
+		System.out.println("Choose a password:");
+		u.setPassword(scan.nextLine().trim());
+		System.out.println("Enter your email:");
+		u.setEmail(scan.nextLine().trim());
+		System.out.println("Enter your first name:");
+		u.setFirstName(scan.nextLine().trim());
+		System.out.println("Enter your last name:");
+		u.setLastName(scan.nextLine().trim());
+		LocalDate birthday = null;
+		while (birthday==null) {
+			System.out.println("Enter your birthday (YYYY-MM-DD):");
+			birthday = LocalDate.parse(scan.nextLine().trim());
+		}
+		u.setBirthday(birthday);
+		System.out.println("Are you a staff member? (y/n):");
+		String type = scan.nextLine().trim();
+		if (type.equals("n")) {
+			u.setType(UserType.VACATIONER);
+		} else {
+			System.out.println("Are you flight staff, hotel staff, or car staff? (f/h/c)");
+			switch(scan.nextLine().trim()) {
+				case "f":
+					u.setType(UserType.FLIGHT_STAFF);
+					break;
+				case "h":
+					u.setType(UserType.HOTEL_STAFF);
+					break;
+				case "c":
+					u.setType(UserType.CAR_STAFF);
+					break;
+			}
+		}
+		us.register(u);
 		
 	}
 	
