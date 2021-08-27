@@ -7,6 +7,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.revature.Menu;
 import com.revature.beans.Activity;
 import com.revature.beans.User;
 
@@ -18,27 +19,24 @@ public class UserService {
 	private static MultiValueMap<String, String> myCookies = new LinkedMultiValueMap<String, String>();
 
 	
-	public Mono<User> loginAsTest() {
+	public Mono<User> login(User u) {
 		WebClient webClient = WebClient.create();
-
-		User u = new User();
-		u.setUsername("test");
-		u.setPassword("password");
-		webClient.post()
+		return webClient.post()
 				.uri("http://localhost:8080/users")
 				.body(Mono.just(u),User.class)
-				.exchange()
-				.subscribe( r -> {
+				.exchangeToMono(r ->  {
 					for (String key: r.cookies().keySet()) {
 				        myCookies.put(key, Arrays.asList(r.cookies().get(key).get(0).getValue()));
 				      }
+					return r.bodyToMono(User.class);
+					
 				});
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+//			try {
+//				Thread.sleep(1000);
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 	}
 	
 	public void printAllActivities() {
@@ -51,12 +49,12 @@ public class UserService {
 		activities.subscribe( (act) -> {
 			System.out.println(act);
 		});
-		
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+//		
+//		try {
+//			Thread.sleep(1000);
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 }

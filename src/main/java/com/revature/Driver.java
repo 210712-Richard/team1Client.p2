@@ -19,7 +19,9 @@ public class Driver {
 	private static void testMethod(SpringApplication application, String[] args) {
 		ApplicationContext ctx = application.run(args);
 		UserService us = ctx.getBean(UserService.class);
-		us.loginAsTest();
-		us.printAllActivities();
+		Menu menu = ctx.getBean(Menu.class);
+		//us.loginAsTest();
+		//us.printAllActivities();
+		menu.start();
 	}
 }

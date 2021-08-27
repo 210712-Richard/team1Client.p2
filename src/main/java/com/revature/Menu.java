@@ -5,6 +5,8 @@ import java.util.Scanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.revature.beans.User;
+import com.revature.beans.UserType;
 import com.revature.services.UserService;
 
 @Component
@@ -14,6 +16,12 @@ public class Menu {
 	@Autowired
 	private Scanner scan;
 	
+	private static User loggedUser;
+
+	public static void setLoggedUser(User u) {
+		loggedUser = u;
+	}
+
 	public void start() {
 		while(true) {
 			switch(mainMenuInput()) {
@@ -21,7 +29,7 @@ public class Menu {
 					register();
 					break;
 				case "2":
-					loginMenu();
+					login();
 					break;
 				case "3":
 					return;	
@@ -31,15 +39,50 @@ public class Menu {
 
 	private String mainMenuInput() {
 		// Using the scanner, asks the user for one of the above 3 mainmenu choices
-		return "";
+		System.out.println("Vacationeer!\n"
+				+ "1: Register for a new account\n"
+				+ "2: Login\n"
+				+ "3: Quit\n");
+		return scan.nextLine().trim();
 	}
 
 	private void register() {
 		// Takes input and registers user with a request based on that input
 		
 	}
+	
+
+	private void login() {
+		// Takes input and logs in user with a request based on that input
+		User u = new User();
+		System.out.println("Enter your username");
+		u.setUsername(scan.nextLine().trim());
+		System.out.println("Enter your password");
+		u.setPassword(scan.nextLine().trim());
+		loggedUser = us.login(u)
+		.map(user -> {
+			System.out.println("Login Successful");
+			return user;
+		})
+		.block();
+		loginMenu();
+//		while(loggedUser == null) {
+//			try {
+//				Thread.sleep(100);
+//				System.out.println("waiting for login");
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//		loginMenu();
+	}
+
 
 	private void loginMenu() {
+		if (loggedUser == null) {
+			System.out.println("Incorrect login credentials");
+			return;
+		}
 		while(true) {
 			switch (loginMenuInput()) {
 				case "1":
@@ -66,7 +109,16 @@ public class Menu {
 
 	private String loginMenuInput() {
 		// Using the scanner, asks the user for one of the above 5 loginmenu choices
-		return "";
+				System.out.println("Welcome, "+loggedUser.getUsername()+"\n"
+						+ "1: Create a new Vacation\n"
+						+ "2: Edit a vacation\n"
+						+ "3: Go on a vacation!\n"
+						+ "4: Logout\n"
+						+ "5: Delete Account\n");
+				if (!loggedUser.getType().equals(UserType.VACATIONER)) {
+					System.out.println("6: confirm a reservation]n");
+				}
+				return scan.nextLine().trim();
 	}
 
 	private void createVacation() {
@@ -193,7 +245,7 @@ public class Menu {
 
 	private void logout() {
 		// Logs the user out and returns them to the start menu
-		
+		loggedUser = null;		
 	}
 	
 	private void deleteAccount() {
