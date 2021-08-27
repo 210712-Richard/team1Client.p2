@@ -7,7 +7,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.revature.Menu;
 import com.revature.beans.Activity;
 import com.revature.beans.User;
 
@@ -38,6 +37,7 @@ public class UserService {
 		WebClient webClient = WebClient.create();
 		return webClient.delete()
 				.uri("http://localhost:8080/users")
+				.cookies(cookies -> cookies.addAll(myCookies))
 				.exchangeToMono(r -> {
 					if (r.statusCode().is2xxSuccessful()) {
 						return Mono.empty();
