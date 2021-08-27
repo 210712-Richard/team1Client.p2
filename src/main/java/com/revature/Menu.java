@@ -3,14 +3,20 @@ package com.revature;
 import java.time.LocalDate;
 import java.util.Scanner;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 import com.revature.beans.User;
 import com.revature.beans.UserType;
 import com.revature.services.UserService;
-import com.revature.util.SingletonScanner;
 
+@Component
 public class Menu {
-	private UserService us = new UserService();
-	private Scanner scan = SingletonScanner.getScanner().getScan();
+	@Autowired
+	private UserService us;
+	@Autowired
+	private Scanner scan;
+	
 	private static User loggedUser;
 
 	public static void setLoggedUser(User u) {
@@ -90,16 +96,22 @@ public class Menu {
 		u.setUsername(scan.nextLine().trim());
 		System.out.println("Enter your password");
 		u.setPassword(scan.nextLine().trim());
-		us.login(u);
-		while(loggedUser == null) {
-			try {
-				Thread.sleep(100);
-				System.out.println("waiting for login");
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
+		loggedUser = us.login(u)
+		.map(user -> {
+			System.out.println("Login Successful");
+			return user;
+		})
+		.block();
 		loginMenu();
+//		while(loggedUser == null) {
+//			try {
+//				Thread.sleep(100);
+//				System.out.println("waiting for login");
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//		loginMenu();
 	}
 
 

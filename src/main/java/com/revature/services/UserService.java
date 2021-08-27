@@ -1,6 +1,7 @@
 package com.revature.services;
 
-import org.springframework.http.MediaType;
+import java.util.Arrays;
+
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -13,23 +14,22 @@ import com.revature.beans.User;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Arrays;
-
 @Service
 public class UserService {
 	private static MultiValueMap<String, String> myCookies = new LinkedMultiValueMap<String, String>();
 
-	public void login(User u) {
+	
+	public Mono<User> login(User u) {
 		WebClient webClient = WebClient.create();
-		webClient.post()
+		return webClient.post()
 				.uri("http://localhost:8080/users")
 				.body(Mono.just(u),User.class)
-				.exchange()
-				.subscribe( r -> {
+				.exchangeToMono(r ->  {
 					for (String key: r.cookies().keySet()) {
 				        myCookies.put(key, Arrays.asList(r.cookies().get(key).get(0).getValue()));
 				      }
-					r.bodyToMono(User.class).subscribe(user -> Menu.setLoggedUser(user));
+					return r.bodyToMono(User.class);
+					
 				});
 //			try {
 //				Thread.sleep(1000);
