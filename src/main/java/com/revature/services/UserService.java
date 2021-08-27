@@ -1,6 +1,7 @@
 package com.revature.services;
 
-import org.springframework.http.MediaType;
+import java.util.Arrays;
+
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -8,19 +9,16 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.revature.beans.Activity;
 import com.revature.beans.User;
-import com.sun.tools.sjavac.Log;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.Arrays;
 
 @Service
 public class UserService {
 	private static MultiValueMap<String, String> myCookies = new LinkedMultiValueMap<String, String>();
 
 	
-	public void loginAsTest() {
+	public Mono<User> loginAsTest() {
 		WebClient webClient = WebClient.create();
 
 		User u = new User();

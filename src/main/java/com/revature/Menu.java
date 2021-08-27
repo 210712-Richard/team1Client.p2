@@ -2,12 +2,17 @@ package com.revature;
 
 import java.util.Scanner;
 
-import com.revature.services.UserService;
-import com.revature.util.SingletonScanner;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+import com.revature.services.UserService;
+
+@Component
 public class Menu {
-	private UserService us = new UserService();
-	private Scanner scan = SingletonScanner.getScanner().getScan();
+	@Autowired
+	private UserService us;
+	@Autowired
+	private Scanner scan;
 	
 	public void start() {
 		while(true) {
