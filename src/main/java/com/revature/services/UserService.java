@@ -66,4 +66,14 @@ public class UserService {
 //		}
 	}
 
+	public void register(User u) {
+		WebClient webClient = WebClient.create();
+		webClient.put()
+				.uri("http://localhost:8080/users/"+u.getUsername())
+				.body(Mono.just(u),User.class)
+				.retrieve()
+				.bodyToMono(User.class)
+				.subscribe(user -> System.out.println(user));
+	}
+
 }
