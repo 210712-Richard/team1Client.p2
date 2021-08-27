@@ -31,12 +31,21 @@ public class UserService {
 					return r.bodyToMono(User.class);
 					
 				});
-//			try {
-//				Thread.sleep(1000);
-//			} catch (InterruptedException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
+
+	}
+	
+	public Mono<Void> logout() {
+		WebClient webClient = WebClient.create();
+		return webClient.delete()
+				.uri("http://localhost:8080/users")
+				.exchangeToMono(r -> {
+					if (r.statusCode().is2xxSuccessful()) {
+						return Mono.empty();
+					}
+					else {
+						return Mono.error(new Throwable("Logout failed"));
+					}
+				});
 	}
 	
 	public void printAllActivities() {

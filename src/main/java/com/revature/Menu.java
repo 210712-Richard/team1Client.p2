@@ -245,7 +245,9 @@ public class Menu {
 
 	private void logout() {
 		// Logs the user out and returns them to the start menu
+		us.logout().subscribe();
 		loggedUser = null;		
+		
 	}
 	
 	private void deleteAccount() {
