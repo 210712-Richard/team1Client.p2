@@ -103,15 +103,6 @@ public class Menu {
 		})
 		.block();
 		loginMenu();
-//		while(loggedUser == null) {
-//			try {
-//				Thread.sleep(100);
-//				System.out.println("waiting for login");
-//			} catch (InterruptedException e) {
-//				e.printStackTrace();
-//			}
-//		}
-//		loginMenu();
 	}
 
 
