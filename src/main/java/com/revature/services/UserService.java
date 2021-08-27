@@ -1,46 +1,51 @@
 package com.revature.services;
 
-import org.springframework.http.MediaType;
+import java.util.Arrays;
+
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.revature.Menu;
 import com.revature.beans.Activity;
 import com.revature.beans.User;
-import com.sun.tools.sjavac.Log;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.Arrays;
 
 @Service
 public class UserService {
 	private static MultiValueMap<String, String> myCookies = new LinkedMultiValueMap<String, String>();
 
 	
-	public void loginAsTest() {
+	public Mono<User> login(User u) {
 		WebClient webClient = WebClient.create();
-
-		User u = new User();
-		u.setUsername("test");
-		u.setPassword("password");
-		webClient.post()
+		return webClient.post()
 				.uri("http://localhost:8080/users")
 				.body(Mono.just(u),User.class)
-				.exchange()
-				.subscribe( r -> {
+				.exchangeToMono(r ->  {
 					for (String key: r.cookies().keySet()) {
 				        myCookies.put(key, Arrays.asList(r.cookies().get(key).get(0).getValue()));
 				      }
+					return r.bodyToMono(User.class);
+					
 				});
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+
+	}
+	
+	public Mono<Void> logout() {
+		WebClient webClient = WebClient.create();
+		return webClient.delete()
+				.uri("http://localhost:8080/users")
+				.exchangeToMono(r -> {
+					if (r.statusCode().is2xxSuccessful()) {
+						return Mono.empty();
+					}
+					else {
+						return Mono.error(new Throwable("Logout failed"));
+					}
+				});
 	}
 	
 	public void printAllActivities() {
@@ -53,12 +58,12 @@ public class UserService {
 		activities.subscribe( (act) -> {
 			System.out.println(act);
 		});
-		
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+//		
+//		try {
+//			Thread.sleep(1000);
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 }
