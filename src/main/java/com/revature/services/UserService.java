@@ -9,6 +9,11 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.revature.beans.Activity;
+import com.revature.beans.Car;
+import com.revature.beans.Flight;
+import com.revature.beans.Hotel;
+import com.revature.beans.Reservation;
+import com.revature.beans.ReservationType;
 import com.revature.beans.User;
 import com.revature.beans.Vacation;
 
@@ -88,6 +93,56 @@ public class UserService {
 					return v.bodyToMono(Vacation.class);
 				});
 		return res;
+	}
+
+	public Flux<Car> getCars(String destination) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/cars/"+destination;
+		System.out.println(uri);
+		Flux<Car> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.bodyToFlux(Car.class);
+		res.subscribe(c -> System.out.println(c));
+		return res;
+	}
+	
+	public Flux<Flight> getFlights(String destination) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/flights/"+destination;
+		System.out.println(uri);
+		Flux<Flight> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.bodyToFlux(Flight.class);
+		res.subscribe(f -> System.out.println(f));
+		return res;
+	}
+	
+	public Flux<Hotel> getHotels(String destination) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/hotels/"+destination;
+		System.out.println(uri);
+		Flux<Hotel> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.bodyToFlux(Hotel.class);
+		res.subscribe(h -> System.out.println(h));
+		return res;
+	}
+
+	public void addReservation(Reservation r) {
+		WebClient webClient = WebClient.create();
+		webClient.post()
+				.uri("http://localhost:8080/reservations/")
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.body(Mono.just(r),Reservation.class)
+				.retrieve()
+				.bodyToMono(Reservation.class)
+				.subscribe();
 	}
 
 }

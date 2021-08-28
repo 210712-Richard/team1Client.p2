@@ -10,6 +10,12 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.revature.beans.Car;
+import com.revature.beans.Flight;
+import com.revature.beans.Hotel;
+import com.revature.beans.Reservation;
+import com.revature.beans.ReservationStatus;
+import com.revature.beans.ReservationType;
 import com.revature.beans.User;
 import com.revature.beans.UserType;
 import com.revature.beans.Vacation;
@@ -188,13 +194,13 @@ public class Menu {
 		while(true) {
 			switch(editVacationInput(v)) {
 				case "1":
-					addCar();
+					addCar(v);
 					break;
 				case "2":
-					addHotel();
+					addHotel(v);
 					break;
 				case "3":
-					addFlight();
+					addFlight(v);
 					break;
 				case "4":
 					addActivityMenu();
@@ -222,17 +228,78 @@ public class Menu {
 		return scan.nextLine().trim();
 	}
 
-	private void addCar() {
+	private void addCar(Vacation v) {
+		Flux<Car> cars = us.getCars(v.getDestination());
+		
+		Flux<Tuple2<Long,Car>> carsOrdered = cars.index();
+		carsOrdered.subscribe(t -> {
+			System.out.println((t.getT1()+1)+": rent this "+t.getT2().getMake()+" " +t.getT2().getModel()+" for "+t.getT2().getCostPerDay()+" per day");
+		});
+		Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+		Car choice = carsOrdered
+				.filter(t -> t.getT1().equals(choiceIndex-1))
+				.blockFirst().getT2();
+		Reservation r = new Reservation();
+		r.setType(ReservationType.CAR);
+		r.setReservedId(choice.getId());
+		r.setVacationId(v.getId());
+		r.setUsername(loggedUser.getUsername());
+		r.setReservedName(choice.getMake()+" "+choice.getModel());
+		r.setStarttime(v.getStartTime());
+		r.setCost(choice.getCostPerDay());
+		r.setDuration(v.getDuration());
+		r.setStatus(ReservationStatus.AWAITING);
+		us.addReservation(r);
 		
 	}
 
-	private void addHotel() {
+	private void addHotel(Vacation v) {
+		Flux<Hotel> hotels = us.getHotels(v.getDestination());
 		
+		Flux<Tuple2<Long,Hotel>> hotelsOrdered = hotels.index();
+		hotelsOrdered.subscribe(h -> {
+			System.out.println((h.getT1()+1)+": reserve a room at the "+h.getT2().getName()+" for "+h.getT2().getCostPerNight()+" per night");
+		});
+		Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+		Hotel choice = hotelsOrdered
+				.filter(t -> t.getT1().equals(choiceIndex-1))
+				.blockFirst().getT2();
+		Reservation r = new Reservation();
+		r.setType(ReservationType.HOTEL);
+		r.setReservedId(choice.getId());
+		r.setVacationId(v.getId());
+		r.setUsername(loggedUser.getUsername());
+		r.setReservedName(choice.getName());
+		r.setStarttime(v.getStartTime());
+		r.setCost(choice.getCostPerNight());
+		r.setDuration(v.getDuration());
+		r.setStatus(ReservationStatus.AWAITING);
+		us.addReservation(r);
 	}
 
-	private void addFlight() {
+	private void addFlight(Vacation v) {
 		// Gets user input for which flight to add
+		Flux<Flight> flights = us.getFlights(v.getDestination());
 		
+		Flux<Tuple2<Long,Flight>> flightsOrdered = flights.index();
+		flightsOrdered.subscribe(f -> {
+			System.out.println((f.getT1()+1)+": buy a seat on an "+f.getT2().getAirline()+" flight for "+f.getT2().getTicketPrice());
+		});
+		Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+		Flight choice = flightsOrdered
+				.filter(t -> t.getT1().equals(choiceIndex-1))
+				.blockFirst().getT2();
+		Reservation r = new Reservation();
+		r.setType(ReservationType.FLIGHT);
+		r.setReservedId(choice.getId());
+		r.setVacationId(v.getId());
+		r.setUsername(loggedUser.getUsername());
+		r.setReservedName(choice.getAirline());
+		r.setStarttime(v.getStartTime());
+		r.setCost(choice.getTicketPrice());
+		r.setDuration(v.getDuration());
+		r.setStatus(ReservationStatus.AWAITING);
+		us.addReservation(r);
 	}
 
 	private void addActivityMenu() {
