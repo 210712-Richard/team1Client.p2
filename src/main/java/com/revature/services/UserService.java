@@ -1,6 +1,7 @@
 package com.revature.services;
 
 import java.util.Arrays;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -9,6 +10,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.revature.beans.Activity;
 import com.revature.beans.User;
+import com.revature.beans.Vacation;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -74,6 +76,18 @@ public class UserService {
 				.retrieve()
 				.bodyToMono(User.class)
 				.subscribe(user -> System.out.println(user));
+	}
+	
+	public Mono<Vacation> getVacation(User u, UUID id) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/users/"+u.getUsername()+"/vacations/"+id;
+		Mono<Vacation> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.exchangeToMono(v -> {
+					return v.bodyToMono(Vacation.class);
+				});
+		return res;
 	}
 
 }

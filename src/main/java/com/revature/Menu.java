@@ -1,14 +1,22 @@
 package com.revature;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Scanner;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.revature.beans.User;
 import com.revature.beans.UserType;
+import com.revature.beans.Vacation;
 import com.revature.services.UserService;
+
+import reactor.core.publisher.Flux;
+import reactor.util.function.Tuple2;
 
 @Component
 public class Menu {
@@ -117,7 +125,7 @@ public class Menu {
 					createVacation();
 					break;
 				case "2":
-					editVacationMenu();
+					chooseVacationMenu();
 					break;
 				case "3":
 					doVacationMenu();
@@ -154,9 +162,31 @@ public class Menu {
 		
 	}
 	
-	private void editVacationMenu() {
+
+	private void chooseVacationMenu() {
+		// COMPLEX
+		// Shows the user all their vacations, 
+		// and lets them choose one to edit
+		Flux<Vacation> vacations = Flux.empty();
+		for (int i = 0; i<loggedUser.getVacations().size();i++) {
+			vacations = Flux.concat(vacations, us.getVacation(loggedUser, loggedUser.getVacations().get(i)));
+		}
+		Flux<Tuple2<Long,Vacation>> vacationsOrdered = vacations.index();
+		vacationsOrdered.subscribe(t -> {
+			System.out.println("Enter "+(t.getT1()+1)+" to edit the vacation to "+t.getT2().getDestination()+" at " +t.getT2().getStartTime());
+		});
+		Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+		Vacation choice = vacationsOrdered
+				.filter(t -> t.getT1().equals(choiceIndex-1))
+				.blockFirst().getT2();
+		editVacationMenu(choice);
+		
+	}
+
+	
+	private void editVacationMenu(Vacation v) {
 		while(true) {
-			switch(editVacationInput()) {
+			switch(editVacationInput(v)) {
 				case "1":
 					addCar();
 					break;
@@ -180,18 +210,23 @@ public class Menu {
 	}
 	
 
-	private String editVacationInput() {
+	private String editVacationInput(Vacation v) {
 		// Using the scanner, asks the user for one of the above 6 editvacationmenu choices
-		return "";
+		System.out.println("Edit this vacation to "+v.getDestination()+"\n"
+				+ "1: Rent a car\n"
+				+ "2: Reserve a hotel\n"
+				+ "3: Book a flight\n"
+				+ "4: Plan an activity\n"
+				+ "5: Reschedule\n"
+				+ "6: Back");
+		return scan.nextLine().trim();
 	}
 
 	private void addCar() {
-		// Gets user input for which car to add
 		
 	}
 
 	private void addHotel() {
-		// Gets user input for which hotel to add
 		
 	}
 
