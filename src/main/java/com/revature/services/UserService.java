@@ -144,5 +144,15 @@ public class UserService {
 				.bodyToMono(Reservation.class)
 				.subscribe();
 	}
+	
+	public void deleteAccount(User u) {
+		WebClient webClient = WebClient.create();
+			webClient.delete()
+				.uri("http://localhost:8080/users/"+u.getUsername())
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.toBodilessEntity()
+				.subscribe();
+	}
 
 }

@@ -140,7 +140,9 @@ public class Menu {
 					logout();
 					return;
 				case "5":
-					deleteAccount();
+					if(deleteAccount()) {
+						return;
+					}
 					break;
 				case "6":
 					confirmReservationMenu();
@@ -380,9 +382,16 @@ public class Menu {
 		
 	}
 	
-	private void deleteAccount() {
+	private boolean deleteAccount() {
 		// Asks for the user's confirmation, then deletes their account
-		
+		System.out.println("Are you sure you want to delete your account? (y/n)");
+		if(scan.nextLine().trim().equals("y")) {
+			us.deleteAccount(loggedUser);
+			us.logout();
+			System.out.println("Account Deleted");
+			return true;
+		}
+		return false;
 	}
 
 	private void confirmReservationMenu() {
