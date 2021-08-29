@@ -151,6 +151,33 @@ public class Menu {
 
 	private void createVacation() {
 		// Takes input, creates vacation based on input, redirects to edit that vacation
+		System.out.println("Where will this vacation be at?");
+		String location = scan.nextLine().trim();
+		
+		System.out.println("What day will this vacation start?");
+		System.out.println("\tFormat: YYYY-MM-DD");
+		
+		String date = scan.nextLine().trim();
+		System.out.println("What time?");
+		System.out.println("\tFormat: HH:MM");
+		String time = scan.nextLine().trim();
+		
+		Integer duration = -1;
+		while(duration <= 0) {
+			System.out.println("How many people will be coming with you?");
+			duration = Integer.parseInt(scan.nextLine());
+			if (duration <= 0) {
+				System.out.println("Please enter a postive amount");
+			}
+		}
+		Integer partySize = -1;
+		while(partySize <= 0) {
+			System.out.println("How many people will be coming with you?");
+			partySize = Integer.parseInt(scan.nextLine());
+			if (partySize <= 0) {
+				System.out.println("Please enter a postive amount");
+			}
+		}
 		
 	}
 	
@@ -290,31 +317,30 @@ public class Menu {
 		
 	}
 
-//	1: Register
-//	2: Login
-//		(IF STAFF) Confirm reservations
+//	1: Register Done
+//	2: Login Done
+//		(IF STAFF) Change reservation status Stephen
 //			(Displays all reservations)
 //			Select one to view
 //				Confirm
-//		1: Create Vacation
+//		1: Create Vacation Michael
 //		2: Edit Vacation
 //			(Displays all reservations made)
-//			1: Reserve a car
-//			2: Book a hotel
-//			3: Book a flight
-//			4: Add an activity
+//			1: Reserve a car Done
+//			2: Book a hotel Done
+//			3: Book a flight Done
+//			4: Add an activity Elizabeth
 //				Select a location
 //					(Displays all Activities at that location)
-//					Select an activity
-//			5: edit an existing reservation
+//					Select an activity 
+//			5: edit an existing reservation 
 //				(Displays all reservations on that vacation)
-//				1: Reschedule the reservation
-//				2: Cancel the reservation
-//		3: Go on Vacation
-//			1: Attend flight
-//			2: Check out of hotel
-//			3: return car
-//		4: Logout
-//		5: Delete account
+//				1: Reschedule the reservation Michael
+//				2: Cancel the reservation Stephen
+//		3. Complete Reservation Stephen
+//			1. Checkout of hotel
+//			2. Return Car
+//		4: Logout Done
+//		5: Delete account Kyle
 //	3: Quit
 }
