@@ -11,6 +11,11 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.revature.beans.Activity;
 import com.revature.beans.Reservation;
+import com.revature.beans.Car;
+import com.revature.beans.Flight;
+import com.revature.beans.Hotel;
+import com.revature.beans.Reservation;
+import com.revature.beans.ReservationType;
 import com.revature.beans.User;
 import com.revature.beans.Vacation;
 
@@ -41,6 +46,7 @@ public class UserService {
 		WebClient webClient = WebClient.create();
 		return webClient.delete()
 				.uri("http://localhost:8080/users")
+				.cookies(cookies -> cookies.addAll(myCookies))
 				.exchangeToMono(r -> {
 					if (r.statusCode().is2xxSuccessful()) {
 						return Mono.empty();
@@ -116,6 +122,106 @@ public class UserService {
 		System.out.println("Vacation End time: " + vac.getEndTime());
 		System.out.println("Vacation Status: " 
 		+ (vac.getEndTime().isBefore(LocalDateTime.now()) ? "No longer available\n" : "Open\n"));
+	}
+
+	public void register(User u) {
+		WebClient webClient = WebClient.create();
+		webClient.put()
+				.uri("http://localhost:8080/users/"+u.getUsername())
+				.body(Mono.just(u),User.class)
+				.retrieve()
+				.bodyToMono(User.class)
+				.subscribe(user -> System.out.println(user));
+	}
+	
+	public Mono<Vacation> getVacation(User u, UUID id) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/users/"+u.getUsername()+"/vacations/"+id;
+		Mono<Vacation> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.exchangeToMono(v -> {
+					return v.bodyToMono(Vacation.class);
+				});
+		return res;
+	}
+
+	public Flux<Car> getCars(String destination) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/cars/"+destination;
+		System.out.println(uri);
+		Flux<Car> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.bodyToFlux(Car.class);
+		res.subscribe(c -> System.out.println(c));
+		return res;
+	}
+	
+	public Flux<Flight> getFlights(String destination) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/flights/"+destination;
+		System.out.println(uri);
+		Flux<Flight> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.bodyToFlux(Flight.class);
+		res.subscribe(f -> System.out.println(f));
+		return res;
+	}
+	
+	public Flux<Hotel> getHotels(String destination) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/hotels/"+destination;
+		System.out.println(uri);
+		Flux<Hotel> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.bodyToFlux(Hotel.class);
+		res.subscribe(h -> System.out.println(h));
+		return res;
+	}
+
+	public void addReservation(Reservation r) {
+		WebClient webClient = WebClient.create();
+		webClient.post()
+				.uri("http://localhost:8080/reservations/")
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.body(Mono.just(r),Reservation.class)
+				.retrieve()
+				.bodyToMono(Reservation.class)
+				.subscribe();
+	}
+	
+	public void deleteAccount(User u) {
+		WebClient webClient = WebClient.create();
+			webClient.delete()
+				.uri("http://localhost:8080/users/"+u.getUsername())
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.toBodilessEntity()
+				.subscribe();
+	}
+	
+	public Mono<Vacation> createVacation(String username, Vacation vac) {
+		WebClient webClient = WebClient.create();
+		return webClient.post()
+		.uri("http://localhost:8080/users/"+username+"/vacations")
+		.body(Mono.just(vac), Vacation.class)
+		.cookies(cookies -> cookies.addAll(myCookies))
+		.exchangeToMono(r -> {
+			if (r.statusCode().is2xxSuccessful()) {
+				System.out.println("Vacation created");
+				return r.bodyToMono(Vacation.class);
+			}
+			else {
+				System.out.println("Error creating vacation. Please try again");
+				return Mono.just(new Vacation());
+			}
+		});
 	}
 
 }

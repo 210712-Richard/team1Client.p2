@@ -26,7 +26,6 @@ import com.revature.services.UserService;
 import reactor.core.publisher.Flux;
 import reactor.util.function.Tuple2;
 
-
 @Component
 public class Menu {
 	@Autowired
@@ -62,12 +61,48 @@ public class Menu {
 		System.out.println("Vacationeer!\n"
 				+ "1: Register for a new account\n"
 				+ "2: Login\n"
-				+ "3: Quit\n");
+				+ "3: Quit");
 		return scan.nextLine().trim();
 	}
 
 	private void register() {
 		// Takes input and registers user with a request based on that input
+		User u = new User();
+		System.out.println("Choose a username:");
+		u.setUsername(scan.nextLine().trim());
+		System.out.println("Choose a password:");
+		u.setPassword(scan.nextLine().trim());
+		System.out.println("Enter your email:");
+		u.setEmail(scan.nextLine().trim());
+		System.out.println("Enter your first name:");
+		u.setFirstName(scan.nextLine().trim());
+		System.out.println("Enter your last name:");
+		u.setLastName(scan.nextLine().trim());
+		LocalDate birthday = null;
+		while (birthday==null) {
+			System.out.println("Enter your birthday (YYYY-MM-DD):");
+			birthday = LocalDate.parse(scan.nextLine().trim());
+		}
+		u.setBirthday(birthday);
+		System.out.println("Are you a staff member? (y/n):");
+		String type = scan.nextLine().trim();
+		if (type.equals("n")) {
+			u.setType(UserType.VACATIONER);
+		} else {
+			System.out.println("Are you flight staff, hotel staff, or car staff? (f/h/c)");
+			switch(scan.nextLine().trim()) {
+				case "f":
+					u.setType(UserType.FLIGHT_STAFF);
+					break;
+				case "h":
+					u.setType(UserType.HOTEL_STAFF);
+					break;
+				case "c":
+					u.setType(UserType.CAR_STAFF);
+					break;
+			}
+		}
+		us.register(u);
 		
 	}
 	
@@ -86,15 +121,6 @@ public class Menu {
 		})
 		.block();
 		loginMenu();
-//		while(loggedUser == null) {
-//			try {
-//				Thread.sleep(100);
-//				System.out.println("waiting for login");
-//			} catch (InterruptedException e) {
-//				e.printStackTrace();
-//			}
-//		}
-//		loginMenu();
 	}
 
 
@@ -109,7 +135,7 @@ public class Menu {
 					createVacation();
 					break;
 				case "2":
-					editVacationMenu();
+					chooseVacationMenu();
 					break;
 				case "3":
 					doVacationMenu();
@@ -118,7 +144,9 @@ public class Menu {
 					logout();
 					return;
 				case "5":
-					deleteAccount();
+					if(deleteAccount()) {
+						return;
+					}
 					break;
 				case "6":
 					confirmReservationMenu();
@@ -143,20 +171,81 @@ public class Menu {
 
 	private void createVacation() {
 		// Takes input, creates vacation based on input, redirects to edit that vacation
+		System.out.println("Where will this vacation be at?");
+		String location = scan.nextLine().trim();
+		
+		System.out.println("What day will this vacation start?");
+		System.out.println("\tFormat: YYYY-MM-DD");
+		
+		String date = scan.nextLine().trim();
+		System.out.println("What time?");
+		System.out.println("\tFormat: HH:MM");
+		String time = scan.nextLine().trim();
+		
+		Integer duration = -1;
+		while(duration <= 0) {
+			System.out.println("How many days will you be on vacation?");
+			duration = Integer.parseInt(scan.nextLine());
+			if (duration <= 0) {
+				System.out.println("Please enter a postive amount");
+			}
+		}
+		Integer partySize = -1;
+		while(partySize <= 0) {
+			System.out.println("How many people will be coming with you?");
+			partySize = Integer.parseInt(scan.nextLine());
+			if (partySize <= 0) {
+				System.out.println("Please enter a postive amount");
+			}
+		}
+		Vacation vac = new Vacation();
+		vac.setDestination(location);
+		LocalDate localDate = LocalDate.parse(date);
+		LocalTime localTime = LocalTime.parse(time);
+		LocalDateTime startTime = LocalDateTime.of(localDate, localTime);
+		vac.setStartTime(startTime);
+		vac.setPartySize(partySize);
+		vac.setDuration(duration);
+		vac = us.createVacation(loggedUser.getUsername(), vac).block();
+		if (vac.getId() != null) {
+			loggedUser.getVacations().add(vac.getId());
+		}
 		
 	}
 	
-	private void editVacationMenu() {
+
+	private void chooseVacationMenu() {
+		// COMPLEX
+		// Shows the user all their vacations, 
+		// and lets them choose one to edit
+		Flux<Vacation> vacations = Flux.empty();
+		for (int i = 0; i<loggedUser.getVacations().size();i++) {
+			vacations = Flux.concat(vacations, us.getVacation(loggedUser, loggedUser.getVacations().get(i)));
+		}
+		Flux<Tuple2<Long,Vacation>> vacationsOrdered = vacations.index();
+		vacationsOrdered.subscribe(t -> {
+			System.out.println("Enter "+(t.getT1()+1)+" to edit the vacation to "+t.getT2().getDestination()+" at " +t.getT2().getStartTime());
+		});
+		Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+		Vacation choice = vacationsOrdered
+				.filter(t -> t.getT1().equals(choiceIndex-1))
+				.blockFirst().getT2();
+		editVacationMenu(choice);
+		
+	}
+
+	
+	private void editVacationMenu(Vacation v) {
 		while(true) {
-			switch(editVacationInput()) {
+			switch(editVacationInput(v)) {
 				case "1":
-					addCar();
+					addCar(v);
 					break;
 				case "2":
-					addHotel();
+					addHotel(v);
 					break;
 				case "3":
-					addFlight();
+					addFlight(v);
 					break;
 				case "4":
 					addActivityMenu();
@@ -172,24 +261,90 @@ public class Menu {
 	}
 	
 
-	private String editVacationInput() {
+	private String editVacationInput(Vacation v) {
 		// Using the scanner, asks the user for one of the above 6 editvacationmenu choices
-		return "";
+		System.out.println("Edit this vacation to "+v.getDestination()+"\n"
+				+ "1: Rent a car\n"
+				+ "2: Reserve a hotel\n"
+				+ "3: Book a flight\n"
+				+ "4: Plan an activity\n"
+				+ "5: Reschedule\n"
+				+ "6: Back");
+		return scan.nextLine().trim();
 	}
 
-	private void addCar() {
-		// Gets user input for which car to add
+	private void addCar(Vacation v) {
+		Flux<Car> cars = us.getCars(v.getDestination());
+		
+		Flux<Tuple2<Long,Car>> carsOrdered = cars.index();
+		carsOrdered.subscribe(t -> {
+			System.out.println((t.getT1()+1)+": rent this "+t.getT2().getMake()+" " +t.getT2().getModel()+" for "+t.getT2().getCostPerDay()+" per day");
+		});
+		Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+		Car choice = carsOrdered
+				.filter(t -> t.getT1().equals(choiceIndex-1))
+				.blockFirst().getT2();
+		Reservation r = new Reservation();
+		r.setType(ReservationType.CAR);
+		r.setReservedId(choice.getId());
+		r.setVacationId(v.getId());
+		r.setUsername(loggedUser.getUsername());
+		r.setReservedName(choice.getMake()+" "+choice.getModel());
+		r.setStarttime(v.getStartTime());
+		r.setCost(choice.getCostPerDay());
+		r.setDuration(v.getDuration());
+		r.setStatus(ReservationStatus.AWAITING);
+		us.addReservation(r);
 		
 	}
 
-	private void addHotel() {
-		// Gets user input for which hotel to add
+	private void addHotel(Vacation v) {
+		Flux<Hotel> hotels = us.getHotels(v.getDestination());
 		
+		Flux<Tuple2<Long,Hotel>> hotelsOrdered = hotels.index();
+		hotelsOrdered.subscribe(h -> {
+			System.out.println((h.getT1()+1)+": reserve a room at the "+h.getT2().getName()+" for "+h.getT2().getCostPerNight()+" per night");
+		});
+		Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+		Hotel choice = hotelsOrdered
+				.filter(t -> t.getT1().equals(choiceIndex-1))
+				.blockFirst().getT2();
+		Reservation r = new Reservation();
+		r.setType(ReservationType.HOTEL);
+		r.setReservedId(choice.getId());
+		r.setVacationId(v.getId());
+		r.setUsername(loggedUser.getUsername());
+		r.setReservedName(choice.getName());
+		r.setStarttime(v.getStartTime());
+		r.setCost(choice.getCostPerNight());
+		r.setDuration(v.getDuration());
+		r.setStatus(ReservationStatus.AWAITING);
+		us.addReservation(r);
 	}
 
-	private void addFlight() {
+	private void addFlight(Vacation v) {
 		// Gets user input for which flight to add
+		Flux<Flight> flights = us.getFlights(v.getDestination());
 		
+		Flux<Tuple2<Long,Flight>> flightsOrdered = flights.index();
+		flightsOrdered.subscribe(f -> {
+			System.out.println((f.getT1()+1)+": buy a seat on an "+f.getT2().getAirline()+" flight for "+f.getT2().getTicketPrice());
+		});
+		Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+		Flight choice = flightsOrdered
+				.filter(t -> t.getT1().equals(choiceIndex-1))
+				.blockFirst().getT2();
+		Reservation r = new Reservation();
+		r.setType(ReservationType.FLIGHT);
+		r.setReservedId(choice.getId());
+		r.setVacationId(v.getId());
+		r.setUsername(loggedUser.getUsername());
+		r.setReservedName(choice.getAirline());
+		r.setStarttime(v.getStartTime());
+		r.setCost(choice.getTicketPrice());
+		r.setDuration(v.getDuration());
+		r.setStatus(ReservationStatus.AWAITING);
+		us.addReservation(r);
 	}
 
 	private void addActivityMenu() {
@@ -421,13 +576,20 @@ public class Menu {
 	private void logout() {
 		// Logs the user out and returns them to the start menu
 		us.logout().subscribe();
-		loggedUser = null;		
+		loggedUser = null;
 		
 	}
 	
-	private void deleteAccount() {
+	private boolean deleteAccount() {
 		// Asks for the user's confirmation, then deletes their account
-		
+		System.out.println("Are you sure you want to delete your account? (y/n)");
+		if(scan.nextLine().trim().equals("y")) {
+			us.deleteAccount(loggedUser);
+			us.logout();
+			System.out.println("Account Deleted");
+			return true;
+		}
+		return false;
 	}
 
 	private void confirmReservationMenu() {
@@ -452,31 +614,30 @@ public class Menu {
 
 	}
 
-//	1: Register
-//	2: Login
-//		(IF STAFF) Confirm reservations
+//	1: Register Done
+//	2: Login Done
+//		(IF STAFF) Change reservation status Stephen
 //			(Displays all reservations)
 //			Select one to view
 //				Confirm
-//		1: Create Vacation
+//		1: Create Vacation Michael
 //		2: Edit Vacation
 //			(Displays all reservations made)
-//			1: Reserve a car
-//			2: Book a hotel
-//			3: Book a flight
-//			4: Add an activity
+//			1: Reserve a car Done
+//			2: Book a hotel Done
+//			3: Book a flight Done
+//			4: Add an activity Elizabeth
 //				Select a location
 //					(Displays all Activities at that location)
-//					Select an activity
-//			5: edit an existing reservation
+//					Select an activity 
+//			5: edit an existing reservation 
 //				(Displays all reservations on that vacation)
-//				1: Reschedule the reservation
-//				2: Cancel the reservation
-//		3: Go on Vacation
-//			1: Attend flight
-//			2: Check out of hotel
-//			3: return car
-//		4: Logout
-//		5: Delete account
+//				1: Reschedule the reservation Michael
+//				2: Cancel the reservation Stephen
+//		3. Complete Reservation Stephen
+//			1. Checkout of hotel
+//			2. Return Car
+//		4: Logout Done
+//		5: Delete account Kyle
 //	3: Quit
 }
