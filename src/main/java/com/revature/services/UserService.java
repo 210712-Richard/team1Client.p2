@@ -15,6 +15,10 @@ import com.revature.beans.Car;
 import com.revature.beans.Flight;
 import com.revature.beans.Hotel;
 import com.revature.beans.Reservation;
+
+
+import com.revature.beans.ReservationType;
+
 import com.revature.beans.User;
 import com.revature.beans.Vacation;
 
@@ -100,6 +104,7 @@ public class UserService {
 				.subscribe(user -> System.out.println(user));
 	}
 	
+
 	public Mono<Activity> addActivity(String Id) {
 		WebClient webClient = WebClient.create();
 		 
@@ -116,6 +121,20 @@ public class UserService {
 			});
 	}
 	
+
+	public Mono<Vacation> getVacation(User u, UUID id) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/users/"+u.getUsername()+"/vacations/"+id;
+		Mono<Vacation> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.exchangeToMono(v -> {
+					return v.bodyToMono(Vacation.class);
+				});
+		return res;
+	}
+
+
 	public Flux<Car> getCars(String destination) {
 		WebClient webClient = WebClient.create();
 		String uri = "http://localhost:8080/cars/"+destination;
@@ -129,6 +148,7 @@ public class UserService {
 		return res;
 	}
 	
+
 	public void addReservation(Reservation r) {
 		WebClient webClient = WebClient.create();
 		webClient.post()
@@ -153,6 +173,7 @@ public class UserService {
 	}
 	
 	
+
 	public Flux<Flight> getFlights(String destination) {
 		WebClient webClient = WebClient.create();
 		String uri = "http://localhost:8080/flights/"+destination;
@@ -178,6 +199,18 @@ public class UserService {
 		res.subscribe(h -> System.out.println(h));
 		return res;
 	}
+
+	public void addReservation(Reservation r) {
+		WebClient webClient = WebClient.create();
+		webClient.post()
+				.uri("http://localhost:8080/reservations/")
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.body(Mono.just(r),Reservation.class)
+				.retrieve()
+				.bodyToMono(Reservation.class)
+				.subscribe();
+	}
+
 	
 	public void deleteAccount(User u) {
 		WebClient webClient = WebClient.create();
@@ -187,6 +220,25 @@ public class UserService {
 				.retrieve()
 				.toBodilessEntity()
 				.subscribe();
+	}
+
+	
+	public Mono<Vacation> createVacation(String username, Vacation vac) {
+		WebClient webClient = WebClient.create();
+		return webClient.post()
+		.uri("http://localhost:8080/users/"+username+"/vacations")
+		.body(Mono.just(vac), Vacation.class)
+		.cookies(cookies -> cookies.addAll(myCookies))
+		.exchangeToMono(r -> {
+			if (r.statusCode().is2xxSuccessful()) {
+				System.out.println("Vacation created");
+				return r.bodyToMono(Vacation.class);
+			}
+			else {
+				System.out.println("Error creating vacation. Please try again");
+				return Mono.just(new Vacation());
+			}
+		});
 	}
 
 
