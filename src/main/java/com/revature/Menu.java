@@ -1,13 +1,20 @@
 package com.revature;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.revature.beans.Car;
+import com.revature.beans.Flight;
+import com.revature.beans.Hotel;
 import com.revature.beans.Reservation;
 import com.revature.beans.ReservationStatus;
 import com.revature.beans.ReservationType;
@@ -15,6 +22,10 @@ import com.revature.beans.User;
 import com.revature.beans.UserType;
 import com.revature.beans.Vacation;
 import com.revature.services.UserService;
+
+import reactor.core.publisher.Flux;
+import reactor.util.function.Tuple2;
+
 
 @Component
 public class Menu {
@@ -218,9 +229,7 @@ public class Menu {
 				getVacations();
 				break;
 			case "2":	// View reservations for vacation
-				viewResForVacationMenu();
-				
-				// If result is not null	
+				viewResForVacationMenu();				
 				break;			
 			case "3":	// Quit
 				return;
@@ -313,10 +322,9 @@ public class Menu {
 			System.out.println("Invalid status entered");
 			return;
 		}
-		System.out.println("Updating Reservation: " + res);
+		
 		res.setStatus(ReservationStatus.valueOf(status));
 		us.updateReservation(res);
-		System.out.println("Updated Reservation: " + res);
 	}
 
 	private void modifyResForVacationMenu(Reservation res) {
@@ -352,37 +360,6 @@ public class Menu {
 			System.out.println("1: Return rental car");
 			System.out.println("2: Cancel rental reservation");
 			System.out.println("3: Return to previous menu");
-			
-//			if(selection == 1) {
-//				if(res.getStarttime().isBefore(LocalDateTime.now())) {
-//					// Attempting to return a car you didn't pick up -> ERROR
-//					System.out.println("This rental has not been picked up yet");
-//					return;
-//				}
-//				
-//				System.out.println("Thanks for returning the " + res.getReservedName() +" rental car.");
-//				changeReservationStatus(res, "Closed");
-//			}
-//			
-//			if(selection == 2) {
-//				// Cancel rental car reservation if reservation hasn't started, otherwise close it
-//				if(res.getStarttime().isAfter(LocalDateTime.now())) {
-//					// Attempting to close a reservation that already started - no refund for you
-//					System.out.println("This reservation already started, No refund will be issued for cancellation");
-//					changeReservationStatus(res, "Closed");
-//					return;
-//				}
-//				
-//				System.out.println("Canceling reservation for " + res.getReservedName() + " rental");
-//				changeReservationStatus(res, "Cancel");
-//			}
-//			
-//			else {
-//				if(selection <= 0 || selection > 3)
-//					System.out.println("Invalid input. Returning to previous menu");
-//				
-//				return;
-//			}
 
 		}
 		

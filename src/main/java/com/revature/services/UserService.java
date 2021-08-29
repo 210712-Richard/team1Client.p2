@@ -1,10 +1,8 @@
 package com.revature.services;
 
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -115,7 +113,7 @@ public class UserService {
 		System.out.println("Vacation ID: " + vac.getId());
 		System.out.println("Vacation Location: " + vac.getDestination());
 		System.out.println("Vacation Date: " + vac.getStartTime());
-//		System.out.println("Vacation End time: " + vac.getEndTime());
+		System.out.println("Vacation End time: " + vac.getEndTime());
 		System.out.println("Vacation Status: " 
 		+ (vac.getEndTime().isBefore(LocalDateTime.now()) ? "No longer available\n" : "Open\n"));
 	}
