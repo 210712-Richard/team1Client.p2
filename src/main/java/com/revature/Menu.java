@@ -1,12 +1,19 @@
 package com.revature;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.revature.beans.Reservation;
+import com.revature.beans.ReservationStatus;
+import com.revature.beans.ReservationType;
 import com.revature.beans.User;
 import com.revature.beans.UserType;
+import com.revature.beans.Vacation;
 import com.revature.services.UserService;
 
 @Component
@@ -17,6 +24,8 @@ public class Menu {
 	private Scanner scan;
 	
 	private static User loggedUser;
+	private static List<Vacation> vlist;
+
 
 	public static void setLoggedUser(User u) {
 		loggedUser = u;
@@ -199,48 +208,237 @@ public class Menu {
 		
 	}
 
+
 	private void doVacationMenu() {
+		// Print available user vacations with status assignment based on start time
+		// If vacation time has started, then allow user checkout
 		while(true) {
 			switch(doVacationMenuInput()) {
-				case "1":
-					attendFlightMenu();
-					break;
-				case "2":
-					checkOutHotelMenu();
-					break;
-				case "3":
-					returnCarMenu();
-					break;
-				case "4":
-					return;
+			case "1":	// View vacations
+				getVacations();
+				break;
+			case "2":	// View reservations for vacation
+				viewResForVacationMenu();
+				
+				// If result is not null	
+				break;			
+			case "3":	// Quit
+				return;
+			default: System.out.println("Invalid input. Try again");
+				continue;
 			}
 					
 		}
 		
 	}
-	
 
 	private String doVacationMenuInput() {
-		// Using the scanner, asks the user for one of the above 4 dovacationmenu choices
-		return "";
+		System.out.println("What would you like to do?");
+		System.out.println("1: View all entered vacations");
+		System.out.println("2: View reservations for a vacation");
+		System.out.println("3: Quit");
+		
+		return scan.nextLine().trim();
 	}
 
-	private void attendFlightMenu() {
-		// COMPLEX
-		// With one choice for each flight in the selected reservation, 
-		// each choice with allow the user to fly its corresponding flight			
+	private void viewResForVacationMenu() {
+		if(vlist == null) {
+			vlist = new ArrayList<>();
+			us.getUsersVacations(loggedUser, vlist);
+		}
+		
+		if(vlist.size() == 0) {
+			System.out.println("No vacations available");
+			return;
+		}
+		
+		System.out.println("Which vacation would you like to update?");
+		for(int i = 0; i < vlist.size(); i++) {
+			System.out.println(i+1 + ": Vacation ID: " + vlist.get(i).getId() + 
+					"\n\tCost: " + vlist.get(i).getTotal() +
+					"\n\tDate: " + vlist.get(i).getStartTime() +
+					"\n\tStatus: " + (vlist.get(i).getEndTime().isBefore(LocalDateTime.now()) 
+							? "No longer available\n" : "Open\n"));
+		}
+		
+		// Leave menu option
+		System.out.println(vlist.size()+1 + ": Quit");	
+		
+		int selection = getUserInput();
+		
+		if(selection < 1 || selection > vlist.size()+1) {
+			System.out.println("ERROR: Invalid input entered");
+			return;
+		}
+		
+		if(selection == vlist.size()+1)	// Quit option selected
+			return;
+		
+		if(vlist.get(selection-1).getReservations().size() == 0) {
+			System.out.println("The vacation you selected does not have any associated reservations");
+			System.out.println("Create reservations with this vacation ID or try another\n\n");
+			return;
+		}
+		
+		modifyResForVacationMenuInput(vlist.get(selection-1));
 	}
 
-	private void checkOutHotelMenu() {
-		// COMPLEX
-		// With one choice for each hotel in the selected reservation, 
-		// each choice with allow the user to check out of its corresponding hotel	
+	private void modifyResForVacationMenuInput(Vacation v) {
+
+		if(v.getReservations().size() == 0) {
+			System.out.println("You do not have any reservations booked on this vacation");
+			return;
+		}
+
+		// Print menu for reservations option in vacation
+		System.out.println("Which reservation would you like to change?");
+		for(int i = 0; i < v.getReservations().size(); i++) {
+			System.out.println(i+1 + ": Reservation ID: " + v.getReservations().get(i).getId() + 
+					"\n\tName: " + v.getReservations().get(i).getReservedName() +
+					"\n\tType: " + v.getReservations().get(i).getType() +
+					"\n\tTime: " + v.getReservations().get(i).getStarttime() +
+					"\n\tStatus: " + v.getReservations().get(i).getStatus());
+		}
+		
+		// Leave menu option
+		System.out.println(v.getReservations().size()+1 + ": Quit");	
+		
+		int selection = getUserInput();
+		modifyResForVacationMenu(v.getReservations().get(selection-1));
+
+	}
+	
+	private void changeReservationStatus(Reservation res, String status) {
+		if(ReservationStatus.valueOf(status) == null) {
+			System.out.println("Invalid status entered");
+			return;
+		}
+		System.out.println("Updating Reservation: " + res);
+		res.setStatus(ReservationStatus.valueOf(status));
+		us.updateReservation(res);
+		System.out.println("Updated Reservation: " + res);
 	}
 
-	private void returnCarMenu() {
-		// COMPLEX
-		// With one choice for each car in the selected reservation, 
-		// each choice with allow the user to return its corresponding car		
+	private void modifyResForVacationMenu(Reservation res) {
+		System.out.println("What would you like to do?");
+		int selection = 0;
+		if(res.getType() == ReservationType.FLIGHT) {
+			// Cancel option only
+			System.out.println("1: Cancel flight booking");
+			System.out.println("2: Return to previous menu");
+			selection = getUserInput();
+			
+			if(selection == 1) {
+				// Cancel flight if start time isn't past
+				if(res.getStarttime().isBefore(LocalDateTime.now())) {
+					System.out.println("Flight booking has expired, closing reservation");
+					changeReservationStatus(res, "CLOSED");
+					return;
+				}
+				
+				changeReservationStatus(res, "CANCELLED");
+			}
+			
+			else {
+				if(selection <= 0 || selection > 2)
+					System.out.println("Invalid input. Returning to previous menu");
+				
+				return;
+			}
+
+		}
+		
+		if(res.getType() == ReservationType.CAR) {
+			System.out.println("1: Return rental car");
+			System.out.println("2: Cancel rental reservation");
+			System.out.println("3: Return to previous menu");
+			
+//			if(selection == 1) {
+//				if(res.getStarttime().isBefore(LocalDateTime.now())) {
+//					// Attempting to return a car you didn't pick up -> ERROR
+//					System.out.println("This rental has not been picked up yet");
+//					return;
+//				}
+//				
+//				System.out.println("Thanks for returning the " + res.getReservedName() +" rental car.");
+//				changeReservationStatus(res, "Closed");
+//			}
+//			
+//			if(selection == 2) {
+//				// Cancel rental car reservation if reservation hasn't started, otherwise close it
+//				if(res.getStarttime().isAfter(LocalDateTime.now())) {
+//					// Attempting to close a reservation that already started - no refund for you
+//					System.out.println("This reservation already started, No refund will be issued for cancellation");
+//					changeReservationStatus(res, "Closed");
+//					return;
+//				}
+//				
+//				System.out.println("Canceling reservation for " + res.getReservedName() + " rental");
+//				changeReservationStatus(res, "Cancel");
+//			}
+//			
+//			else {
+//				if(selection <= 0 || selection > 3)
+//					System.out.println("Invalid input. Returning to previous menu");
+//				
+//				return;
+//			}
+
+		}
+		
+		if(res.getType() == ReservationType.HOTEL) {
+			System.out.println("1: Check out of Hotel");
+			System.out.println("2: Cancel Hotel reservation");
+			System.out.println("3: Return to previous menu");
+
+		}
+		
+		selection = getUserInput();
+		
+		if(selection == 1) {
+			if(res.getStarttime().isAfter(LocalDateTime.now())) {
+				// Attempting to complete reservation before it starts -> ERROR
+				System.out.println("This reservation hasn't started yet");
+				return;
+			}
+			
+			System.out.println("Thanks for completing your reservation for " + res.getReservedName());
+			changeReservationStatus(res, "CLOSED");
+		}
+		
+		if(selection == 2) {
+			// Cancel reservation if it hasn't started, otherwise close it
+			
+			if(res.getStarttime().isBefore(LocalDateTime.now())) {
+				// Attempting to close a reservation that already started - no refund for you
+				System.out.println("This reservation already started, No refund will be issued for cancellation");
+				changeReservationStatus(res, "CLOSED");
+				return;
+			}
+			
+			System.out.println("Canceling reservation for " + res.getReservedName());
+			changeReservationStatus(res, "CANCELLED");
+		}
+		
+		else {
+			if(selection <= 0 || selection > 3)
+				System.out.println("Invalid input. Returning to previous menu");
+			
+			return;
+		}
+
+	}
+
+	private void getVacations() {
+		if(loggedUser.getVacations() == null || loggedUser.getVacations().size() == 0) {
+			System.out.println("No vacations booked");
+			return;
+		}
+		
+		vlist = new ArrayList<>();
+		us.getUsersVacations(loggedUser, vlist).blockLast();
+		
+		System.out.println("Vacation list retrieved from getUserVacations: " + vlist);
 	}
 
 	private void logout() {
@@ -260,6 +458,21 @@ public class Menu {
 		// Displays all reservations to the staff user, giving them
 		// the option to view each one, then confirm it
 		
+	}
+	
+	private int getUserInput() {
+		String input = scan.nextLine().trim();
+		int selection = 0;
+		try {
+			selection = Integer.parseInt(input);
+		}
+		catch(Exception e) {
+			System.out.println("ERROR: Invalid input entered");
+			return 0;
+		}
+		
+		return selection;
+
 	}
 
 //	1: Register
