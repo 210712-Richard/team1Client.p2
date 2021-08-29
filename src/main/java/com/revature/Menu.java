@@ -1,6 +1,8 @@
 package com.revature;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -180,7 +182,7 @@ public class Menu {
 		
 		Integer duration = -1;
 		while(duration <= 0) {
-			System.out.println("How many people will be coming with you?");
+			System.out.println("How many days will you be on vacation?");
 			duration = Integer.parseInt(scan.nextLine());
 			if (duration <= 0) {
 				System.out.println("Please enter a postive amount");
@@ -193,6 +195,18 @@ public class Menu {
 			if (partySize <= 0) {
 				System.out.println("Please enter a postive amount");
 			}
+		}
+		Vacation vac = new Vacation();
+		vac.setDestination(location);
+		LocalDate localDate = LocalDate.parse(date);
+		LocalTime localTime = LocalTime.parse(time);
+		LocalDateTime startTime = LocalDateTime.of(localDate, localTime);
+		vac.setStartTime(startTime);
+		vac.setPartySize(partySize);
+		vac.setDuration(duration);
+		vac = us.createVacation(loggedUser.getUsername(), vac).block();
+		if (vac.getId() != null) {
+			loggedUser.getVacations().add(vac.getId());
 		}
 		
 	}
@@ -405,7 +419,7 @@ public class Menu {
 	private void logout() {
 		// Logs the user out and returns them to the start menu
 		us.logout().subscribe();
-		loggedUser = null;		
+		loggedUser = null;
 		
 	}
 	
