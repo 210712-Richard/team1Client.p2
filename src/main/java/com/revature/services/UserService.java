@@ -3,6 +3,7 @@ package com.revature.services;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -10,12 +11,10 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.revature.beans.Activity;
-import com.revature.beans.Reservation;
 import com.revature.beans.Car;
 import com.revature.beans.Flight;
 import com.revature.beans.Hotel;
 import com.revature.beans.Reservation;
-import com.revature.beans.ReservationType;
 import com.revature.beans.User;
 import com.revature.beans.Vacation;
 
@@ -111,7 +110,6 @@ public class UserService {
 		.block();
 		
 		System.out.println("Reservation updated!");
-		System.out.println("Reservation :" + updatedRes);
 		
 	}
 	
@@ -155,7 +153,6 @@ public class UserService {
 				.cookies(cookies -> cookies.addAll(myCookies))
 				.retrieve()
 				.bodyToFlux(Car.class);
-		res.subscribe(c -> System.out.println(c));
 		return res;
 	}
 	
@@ -168,7 +165,6 @@ public class UserService {
 				.cookies(cookies -> cookies.addAll(myCookies))
 				.retrieve()
 				.bodyToFlux(Flight.class);
-		res.subscribe(f -> System.out.println(f));
 		return res;
 	}
 	
@@ -181,7 +177,6 @@ public class UserService {
 				.cookies(cookies -> cookies.addAll(myCookies))
 				.retrieve()
 				.bodyToFlux(Hotel.class);
-		res.subscribe(h -> System.out.println(h));
 		return res;
 	}
 
