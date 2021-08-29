@@ -154,5 +154,23 @@ public class UserService {
 				.toBodilessEntity()
 				.subscribe();
 	}
+	
+	public Mono<Vacation> createVacation(String username, Vacation vac) {
+		WebClient webClient = WebClient.create();
+		return webClient.post()
+		.uri("http://localhost:8080/users/"+username+"/vacations")
+		.body(Mono.just(vac), Vacation.class)
+		.cookies(cookies -> cookies.addAll(myCookies))
+		.exchangeToMono(r -> {
+			if (r.statusCode().is2xxSuccessful()) {
+				System.out.println("Vacation created");
+				return r.bodyToMono(Vacation.class);
+			}
+			else {
+				System.out.println("Error creating vacation. Please try again");
+				return Mono.just(new Vacation());
+			}
+		});
+	}
 
 }
