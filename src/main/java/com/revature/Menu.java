@@ -10,6 +10,7 @@ import java.util.Scanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import com.revature.beans.Activity;
 import com.revature.beans.Car;
 import com.revature.beans.Flight;
 import com.revature.beans.Hotel;
@@ -22,7 +23,10 @@ import com.revature.beans.Vacation;
 import com.revature.services.UserService;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
+
+
 
 @Component
 public class Menu {
@@ -32,12 +36,16 @@ public class Menu {
 	private Scanner scan;
 
 	private static User loggedUser;
+
 	private static List<Vacation> vlist;
 
 	public static void setLoggedUser(User u) {
 		loggedUser = u;
 	}
-
+	
+	//public static void setActivity(Activity activity) {
+	//	activities = activity;
+	//}
 	public void start() {
 		while (true) {
 			switch (mainMenuInput()) {
@@ -231,7 +239,7 @@ public class Menu {
 				addFlight(v);
 				break;
 			case "4":
-				addActivityMenu();
+				addActivityMenu(v);
 				break;
 			case "5":
 				rescheduleReservationMenu();
@@ -251,6 +259,11 @@ public class Menu {
 						+ "3: Book a flight\n" + "4: Plan an activity\n" + "5: Reschedule\n" + "6: Back");
 		return scan.nextLine().trim();
 	}
+	
+	
+	
+
+	
 
 	private void addCar(Vacation v) {
 		Flux<Car> cars = us.getCars(v.getDestination());
@@ -323,23 +336,35 @@ public class Menu {
 		us.addReservation(r);
 	}
 
-	private void addActivityMenu() {
-		// Gets the usres's input for where to search for activities
-		while (true) {
-			String location = scan.nextLine();
-			switch (location) {
-			case "":
-				return;
-			default:
-				addActivity(location);
-			}
-		}
+	
+	private void addActivityMenu(Vacation v) {
+		
+		addActivity(v);
 	}
+	
+						
+		
 
-	private void addActivity(String location) {
+	private Boolean addActivity(Vacation vac) {
 		// COMPLEX
 		// Shows the user all activities at the given location,
 		// and lets them choose one to add
+		Flux<Activity> actFlux = us.printAllActivitiesbyLocation(vac.getDestination());
+		Flux<Tuple2<Long, Activity>> listFlux = actFlux.index();	
+		listFlux.subscribe(t -> {
+			System.out.println("Enter " + (t.getT1() + 1) + ". to add: " + t.getT2().getName());
+			System.out.println("\t" + t.getT2().getDescription());
+			System.out.println("\tCost:" + t.getT2().getCost());
+			System.out.println();
+		});
+		Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+		Activity choice = listFlux.filter(t -> t.getT1().equals(choiceIndex - 1))
+				.blockFirst().getT2();
+		return us.addActivity(loggedUser.getUsername(), vac.getId(), choice)
+				.map(a -> true)
+				.switchIfEmpty(Mono.just(false))
+				.block();
+		
 
 	}
 
@@ -563,7 +588,6 @@ public class Menu {
 		}
 		return false;
 	}
-
 	private void confirmReservationMenu() {
 		// COMPLEX
 		// Displays all reservations to the staff user, giving them
@@ -584,6 +608,9 @@ public class Menu {
 		return selection;
 
 	}
+
+}
+
 
 //	1: Register Done
 //	2: Login Done
@@ -611,4 +638,5 @@ public class Menu {
 //		4: Logout Done
 //		5: Delete account Kyle
 //	3: Quit
-}
+
+

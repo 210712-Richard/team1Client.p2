@@ -25,7 +25,6 @@ import reactor.core.publisher.Mono;
 public class UserService {
 	private static MultiValueMap<String, String> myCookies = new LinkedMultiValueMap<String, String>();
 	
-	
 	public Mono<User> login(User u) {
 		WebClient webClient = WebClient.create();
 		return webClient.post()
@@ -66,12 +65,25 @@ public class UserService {
 		activities.subscribe( (act) -> {
 			System.out.println(act);
 		});
-//		
-//		try {
-//			Thread.sleep(1000);
-//		} catch (InterruptedException e) {
-//			e.printStackTrace();
-//		}
+	}	
+	
+	public Flux<Activity> printAllActivitiesbyLocation(String loc) {
+		WebClient webClient = WebClient.create();
+		return webClient.get()
+				.uri("http://localhost:8080/activities/" + loc)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.bodyToFlux(Activity.class);
+	}	
+	
+	public Mono<Activity> getActivityById(String id) {
+			WebClient webClient = WebClient.create();
+			Flux <Activity> activities = webClient.get()
+					.uri("http://localhost:8080/activities/" + id)
+					.cookies(cookies -> cookies.addAll(myCookies))
+					.retrieve()
+					.bodyToFlux(Activity.class);
+			return activities.single();
 	}
 	
 	public Flux<Vacation> getUsersVacations(User user, List<Vacation> vac_list) {
@@ -132,17 +144,26 @@ public class UserService {
 				.subscribe(user -> System.out.println(user));
 	}
 	
-	public Mono<Vacation> getVacation(User u, UUID id) {
+
+	public Mono<Activity> addActivity(String username, UUID id, Activity act) {
 		WebClient webClient = WebClient.create();
-		String uri = "http://localhost:8080/users/"+u.getUsername()+"/vacations/"+id;
-		Mono<Vacation> res = webClient.get()
-				.uri(uri)
+
+		return webClient.post()
+				.uri("http://localhost:8080/users/"+username+"/vacations/"+id.toString()+"/activities")
+				.body(Mono.just(act), Activity.class)
 				.cookies(cookies -> cookies.addAll(myCookies))
-				.exchangeToMono(v -> {
-					return v.bodyToMono(Vacation.class);
+				.exchangeToMono(r ->{
+					if (r.statusCode().is2xxSuccessful()) {
+						System.out.println("Activity Added");
+						return r.bodyToMono(Activity.class);
+					}
+					else {
+						System.out.println("Error adding activity. Please try again.");
+						return Mono.empty();
+					}
 				});
-		return res;
 	}
+
 
 	public Flux<Car> getCars(String destination) {
 		WebClient webClient = WebClient.create();
@@ -156,6 +177,32 @@ public class UserService {
 		return res;
 	}
 	
+
+	public void addReservation(Reservation r) {
+		WebClient webClient = WebClient.create();
+		webClient.post()
+				.uri("http://localhost:8080/reservations/")
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.body(Mono.just(r),Reservation.class)
+				.retrieve()
+				.bodyToMono(Reservation.class)
+				.subscribe();
+	}
+	
+	public Mono<Vacation> getVacation(User u, UUID id) {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/users/"+u.getUsername()+"/vacations/"+id;
+		Mono<Vacation> res = webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.exchangeToMono(v -> {
+					return v.bodyToMono(Vacation.class);
+				});
+		return res;
+	}
+	
+	
+
 	public Flux<Flight> getFlights(String destination) {
 		WebClient webClient = WebClient.create();
 		String uri = "http://localhost:8080/flights/"+destination;
@@ -180,16 +227,6 @@ public class UserService {
 		return res;
 	}
 
-	public void addReservation(Reservation r) {
-		WebClient webClient = WebClient.create();
-		webClient.post()
-				.uri("http://localhost:8080/reservations/")
-				.cookies(cookies -> cookies.addAll(myCookies))
-				.body(Mono.just(r),Reservation.class)
-				.retrieve()
-				.bodyToMono(Reservation.class)
-				.subscribe();
-	}
 	
 	public void deleteAccount(User u) {
 		WebClient webClient = WebClient.create();
@@ -200,6 +237,7 @@ public class UserService {
 				.toBodilessEntity()
 				.subscribe();
 	}
+
 	
 	public Mono<Vacation> createVacation(String username, Vacation vac) {
 		WebClient webClient = WebClient.create();
@@ -218,5 +256,6 @@ public class UserService {
 			}
 		});
 	}
+
 
 }
