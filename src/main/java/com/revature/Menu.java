@@ -37,7 +37,8 @@ public class Menu {
 
 	private static User loggedUser;
 
-	private static List<Vacation> vlist;
+	private static List<Vacation> vaclist;
+	private static List<Reservation> reslist;
 
 	public static void setLoggedUser(User u) {
 		loggedUser = u;
@@ -136,7 +137,11 @@ public class Menu {
 				chooseVacationMenu();
 				break;
 			case "3":
-				doVacationMenu();
+				if(loggedUser.getType() == UserType.VACATIONER)
+					doVacationMenu();					
+				else
+					getReservations();
+
 				break;
 			case "4":
 				logout();
@@ -146,20 +151,54 @@ public class Menu {
 					return;
 				}
 				break;
-			case "6":
-				confirmReservationMenu();
-				break;
+			default: System.out.println("Invalid input. Try again");
+				continue;
 			}
 		}
 	}
 
+	private void getReservations() {
+		reslist = new ArrayList<>();
+		us.getReservationsByType().flatMap(res -> {
+			reslist.add(res);
+			System.out.println("New reservation added. Res ID: " + res.getId());
+			return Flux.just(res);
+		}).blockLast();
+		
+		modifyReservationStaffMenu();
+	}
+
+	private void modifyReservationStaffMenu() {
+		if(reslist == null) {
+			reslist = new ArrayList<>();
+			us.getReservationsByType().flatMap(res -> {
+				reslist.add(res);
+				System.out.println("New reservation added. Res ID: " + res.getId());
+				return Flux.just(res);
+			}).blockLast();;
+		}
+		
+		if(reslist.size() == 0) {
+			System.out.println("No " + loggedUser.getType().toString().split("_")[0] +
+					" reservations available\n\n");
+			return;
+		}
+		
+		modifyReservationsMenuInput(reslist);
+	}
+
 	private String loginMenuInput() {
 		// Using the scanner, asks the user for one of the above 5 loginmenu choices
-		System.out.println("Welcome, " + loggedUser.getUsername() + "\n" + "1: Create a new Vacation\n"
-				+ "2: Edit a vacation\n" + "3: Go on a vacation!\n" + "4: Logout\n" + "5: Delete Account\n");
-		if (!loggedUser.getType().equals(UserType.VACATIONER)) {
-			System.out.println("6: confirm a reservation]n");
-		}
+		System.out.println("Welcome, " + loggedUser.getUsername());
+		System.out.println("1: Create a new Vacation");
+		System.out.println("2: Edit a vacation");
+		if(loggedUser.getType() != UserType.VACATIONER)
+			System.out.println("3: Modify status for a reservation");
+		else
+			System.out.println("3: Go on a vacation!");
+		
+		System.out.println("4: Logout");
+		System.out.println("5: Delete Account");
 		return scan.nextLine().trim();
 	}
 
@@ -407,66 +446,73 @@ public class Menu {
 	}
 
 	private void viewResForVacationMenu() {
-		if (vlist == null) {
-			vlist = new ArrayList<>();
-			us.getUsersVacations(loggedUser, vlist);
+		if (vaclist == null) {
+			vaclist = new ArrayList<>();
+			us.getUsersVacations(loggedUser, vaclist);
 		}
 
-		if (vlist.size() == 0) {
+		if (vaclist.size() == 0) {
 			System.out.println("No vacations available");
 			return;
 		}
 
 		System.out.println("Which vacation would you like to update?");
-		for (int i = 0; i < vlist.size(); i++) {
-			System.out.println(i + 1 + ": Vacation ID: " + vlist.get(i).getId() + "\n\tCost: " + vlist.get(i).getTotal()
-					+ "\n\tDate: " + vlist.get(i).getStartTime() + "\n\tStatus: "
-					+ (vlist.get(i).getEndTime().isBefore(LocalDateTime.now()) ? "No longer available\n" : "Open\n"));
+		for (int i = 0; i < vaclist.size(); i++) {
+			System.out.println(i + 1 + ": Vacation ID: " + vaclist.get(i).getId() + "\n\tCost: " + vaclist.get(i).getTotal()
+					+ "\n\tDate: " + vaclist.get(i).getStartTime() + "\n\tStatus: "
+					+ (vaclist.get(i).getEndTime().isBefore(LocalDateTime.now()) ? "No longer available\n" : "Open\n"));
 		}
 
 		// Leave menu option
-		System.out.println(vlist.size() + 1 + ": Quit");
+		System.out.println(vaclist.size() + 1 + ": Quit");
 
 		int selection = getUserInput();
 
-		if (selection < 1 || selection > vlist.size() + 1) {
+		if (selection < 1 || selection > vaclist.size() + 1) {
 			System.out.println("ERROR: Invalid input entered");
 			return;
 		}
 
-		if (selection == vlist.size() + 1) // Quit option selected
+		if (selection == vaclist.size() + 1) // Quit option selected
 			return;
 
-		if (vlist.get(selection - 1).getReservations().size() == 0) {
+		if (vaclist.get(selection - 1).getReservations().size() == 0) {
 			System.out.println("The vacation you selected does not have any associated reservations");
 			System.out.println("Create reservations with this vacation ID or try another\n\n");
 			return;
 		}
-
-		modifyResForVacationMenuInput(vlist.get(selection - 1));
+		
+		if(selection == vaclist.size() + 1) // Quit menu
+			loginMenuInput();
+		else
+			modifyReservationsMenuInput(vaclist.get(selection - 1).getReservations());
 	}
 
-	private void modifyResForVacationMenuInput(Vacation v) {
+	private void modifyReservationsMenuInput(List<Reservation> rlist) {
 
-		if (v.getReservations().size() == 0) {
-			System.out.println("You do not have any reservations booked on this vacation");
+		if (rlist.size() == 0) {
+			System.out.println("You do not have any reservations booked");
 			return;
 		}
 
 		// Print menu for reservations option in vacation
 		System.out.println("Which reservation would you like to change?");
-		for (int i = 0; i < v.getReservations().size(); i++) {
-			System.out.println(i + 1 + ": Reservation ID: " + v.getReservations().get(i).getId() + "\n\tName: "
-					+ v.getReservations().get(i).getReservedName() + "\n\tType: " + v.getReservations().get(i).getType()
-					+ "\n\tTime: " + v.getReservations().get(i).getStarttime() + "\n\tStatus: "
-					+ v.getReservations().get(i).getStatus());
+		for (int i = 0; i < rlist.size(); i++) {
+			System.out.println(i + 1 + ": Reservation ID: " + rlist.get(i).getId() + "\n\tName: "
+					+ rlist.get(i).getReservedName() + "\n\tType: " + rlist.get(i).getType()
+					+ "\n\tStatus: "
+					+ rlist.get(i).getStatus());
 		}
 
-		// Leave menu option
-		System.out.println(v.getReservations().size() + 1 + ": Quit");
+		System.out.println(rlist.size() + 1 + ": Quit");
 
 		int selection = getUserInput();
-		modifyResForVacationMenu(v.getReservations().get(selection - 1));
+		
+		if(selection == rlist.size()+1)	// Leave menu selected
+			loginMenuInput();
+		
+		else 
+			modifyReservationsMenu(rlist.get(selection - 1));
 
 	}
 
@@ -480,13 +526,46 @@ public class Menu {
 		us.updateReservation(res);
 	}
 
-	private void modifyResForVacationMenu(Reservation res) {
+	private void modifyReservationsMenu(Reservation res) {
 		System.out.println("What would you like to do?");
 		int selection = 0;
 		if (res.getType() == ReservationType.FLIGHT) {
-			// Cancel option only
+			
+			if (loggedUser.getType() == UserType.FLIGHT_STAFF) {	// Menu for staff
+				System.out.println("1: Confirm flight booking");
+				System.out.println("2: Close flight booking");
+				System.out.println("3: Cancel flight booking");
+				System.out.println("0: Return to previous menu");
+				selection = getUserInput();
+				
+				if (selection == 1) {
+					System.out.println("Staff confirmed reservation for: " + res.getReservedName());
+					changeReservationStatus(res, "CONFIRMED");
+					return;
+				}
+				
+				if (selection == 2) {
+					System.out.println("Staff closed reservation for " + res.getReservedName());					
+					changeReservationStatus(res, "CLOSED");
+					return;
+				}
+				
+				if(selection == 3) {
+					System.out.println("Staff cancelled reservation for " + res.getReservedName());
+					changeReservationStatus(res, "CANCELLED");
+					return;
+				}
+				
+				if (selection < 0 || selection > 3)
+					System.out.println("Invalid input. Returning to previous menu");
+					
+				return;
+				
+
+			}
+			// Cancel option only for vacationers
 			System.out.println("1: Cancel flight booking");
-			System.out.println("2: Return to previous menu");
+			System.out.println("0: Return to previous menu");
 			selection = getUserInput();
 
 			if (selection == 1) {
@@ -497,10 +576,11 @@ public class Menu {
 				}
 
 				changeReservationStatus(res, "CANCELLED");
+				return;
 			}
 
 			else {
-				if (selection <= 0 || selection > 2)
+				if (selection < 0 || selection > 2)
 					System.out.println("Invalid input. Returning to previous menu");
 
 				return;
@@ -509,16 +589,85 @@ public class Menu {
 		} else {
 
 			if (res.getType() == ReservationType.CAR) {
+				if(loggedUser.getType() == UserType.CAR_STAFF) {
+					System.out.println("1: Confirm rental car reservation");
+					System.out.println("2: Close rental car reservation");
+					System.out.println("3: Cancel rental car reservation");
+					System.out.println("0: Return to previous menu");
+					
+					selection = getUserInput();
+
+					if (selection == 1) {
+						System.out.println("Staff confirmed reservation for: " + res.getReservedName());
+						changeReservationStatus(res, "CONFIRMED");
+						return;
+					}
+					
+					if (selection == 2) {
+						System.out.println("Staff closed reservation for " + res.getReservedName());
+						changeReservationStatus(res, "CLOSED");
+						return;
+					}
+
+					if (selection == 3) {
+						System.out.println("Staff cancelled reservation for " + res.getReservedName());
+						changeReservationStatus(res, "CANCELLED");
+						return;
+					}
+
+					else {
+						if (selection < 0 || selection > 3)
+							System.out.println("Invalid input. Returning to previous menu");
+
+						return;
+					}
+				}
+				
+				// Vacationer only options
 				System.out.println("1: Return rental car");
 				System.out.println("2: Cancel rental reservation");
-				System.out.println("3: Return to previous menu");
+				System.out.println("0: Return to previous menu");
 
 			}
 
 			if (res.getType() == ReservationType.HOTEL) {
+				if(loggedUser.getType() == UserType.HOTEL_STAFF) {
+					System.out.println("1: Confirm Hotel reservation");
+					System.out.println("2: Close Hotel reservation");
+					System.out.println("3: Cancel Hotel reservation");
+					System.out.println("0: Return to previous menu");					
+					
+					selection = getUserInput();
+
+					if (selection == 1) {
+						System.out.println("Staff confirmed reservation for: " + res.getReservedName());
+						changeReservationStatus(res, "CONFIRMED");
+						return;
+					}
+					
+					if (selection == 2) {
+						System.out.println("Staff closed reservation for " + res.getReservedName());
+						changeReservationStatus(res, "CLOSED");
+						return;
+					}
+
+					if (selection == 3) {
+						System.out.println("Staff cancelled reservation for " + res.getReservedName());
+						changeReservationStatus(res, "CANCELLED");
+						return;
+					}
+
+					else {
+						if (selection < 0 || selection > 3)
+							System.out.println("Invalid input. Returning to previous menu");
+
+						return;
+					}
+				}
+				
 				System.out.println("1: Check out of Hotel");
 				System.out.println("2: Cancel Hotel reservation");
-				System.out.println("3: Return to previous menu");
+				System.out.println("0: Return to previous menu");
 
 			}
 
@@ -549,7 +698,7 @@ public class Menu {
 			}
 
 			else {
-				if (selection <= 0 || selection > 3)
+				if (selection < 0 || selection > 2)
 					System.out.println("Invalid input. Returning to previous menu");
 
 				return;
@@ -564,10 +713,10 @@ public class Menu {
 			return;
 		}
 
-		vlist = new ArrayList<>();
-		us.getUsersVacations(loggedUser, vlist).blockLast();
+		vaclist = new ArrayList<>();
+		us.getUsersVacations(loggedUser, vaclist).blockLast();
 
-		System.out.println("Vacation list retrieved from getUserVacations: " + vlist);
+		System.out.println("Vacation list retrieved from getUserVacations: " + vaclist);
 	}
 
 	private void logout() {
@@ -587,12 +736,6 @@ public class Menu {
 			return true;
 		}
 		return false;
-	}
-	private void confirmReservationMenu() {
-		// COMPLEX
-		// Displays all reservations to the staff user, giving them
-		// the option to view each one, then confirm it
-
 	}
 
 	private int getUserInput() {

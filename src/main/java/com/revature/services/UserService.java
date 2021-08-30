@@ -16,6 +16,7 @@ import com.revature.beans.Flight;
 import com.revature.beans.Hotel;
 import com.revature.beans.Reservation;
 import com.revature.beans.User;
+import com.revature.beans.UserType;
 import com.revature.beans.Vacation;
 
 import reactor.core.publisher.Flux;
@@ -255,6 +256,16 @@ public class UserService {
 				return Mono.just(new Vacation());
 			}
 		});
+	}
+
+	public Flux<Reservation> getReservationsByType() {
+		WebClient webClient = WebClient.create();
+		String uri = "http://localhost:8080/reservations/";
+		return webClient.get()
+				.uri(uri)
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.retrieve()
+				.bodyToFlux(Reservation.class);
 	}
 
 
