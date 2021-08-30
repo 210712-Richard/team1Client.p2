@@ -1,8 +1,8 @@
 package com.revature.services;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -15,10 +15,6 @@ import com.revature.beans.Car;
 import com.revature.beans.Flight;
 import com.revature.beans.Hotel;
 import com.revature.beans.Reservation;
-
-
-import com.revature.beans.ReservationType;
-
 import com.revature.beans.User;
 import com.revature.beans.Vacation;
 
@@ -28,7 +24,6 @@ import reactor.core.publisher.Mono;
 @Service
 public class UserService {
 	private static MultiValueMap<String, String> myCookies = new LinkedMultiValueMap<String, String>();
-	String aid = null;
 	
 	public Mono<User> login(User u) {
 		WebClient webClient = WebClient.create();
@@ -72,16 +67,13 @@ public class UserService {
 		});
 	}	
 	
-	public void printAllActivitiesbyLocation(String loc) {
+	public Flux<Activity> printAllActivitiesbyLocation(String loc) {
 		WebClient webClient = WebClient.create();
-		Flux<Activity> activities = webClient.get()
+		return webClient.get()
 				.uri("http://localhost:8080/activities/" + loc)
 				.cookies(cookies -> cookies.addAll(myCookies))
 				.retrieve()
 				.bodyToFlux(Activity.class);
-		activities.subscribe( (act) -> {
-			System.out.println(act);
-		});
 	}	
 	
 	public Mono<Activity> getActivityById(String id) {
@@ -92,6 +84,54 @@ public class UserService {
 					.retrieve()
 					.bodyToFlux(Activity.class);
 			return activities.single();
+	}
+	
+	public Flux<Vacation> getUsersVacations(User user, List<Vacation> vac_list) {
+		String baseUrl = "http://localhost:8080";
+		WebClient webClient = WebClient.builder().baseUrl(baseUrl).build();
+		Flux<Vacation> vacs = Flux.empty();		
+		 user.getVacations().forEach((vid) -> {
+			Vacation vac = webClient.get()
+					.uri(uriBuilder ->
+					uriBuilder
+					.path("/users/{username}/vacations/{vacId}")
+					.build(user.getUsername(), vid.toString()))
+					.cookies(cookies -> cookies.addAll(myCookies))
+					.retrieve()
+					.bodyToMono(Vacation.class).concatWith(vacs)
+					.blockFirst();
+			vac_list.add(vac);
+			printVacation(vac);
+			});
+		 
+		 return vacs;		
+	}
+	
+	public void updateReservation(Reservation res) {
+		String baseUrl = "http://localhost:8080";
+		WebClient webClient = WebClient.builder().baseUrl(baseUrl).build();
+			
+		Reservation updatedRes = webClient.put()
+		.uri(uriBuilder -> uriBuilder
+				.path("/reservations/{resId}/status")
+				.build(res.getId()))
+		.cookies(cookies -> cookies.addAll(myCookies))
+		.body(Mono.just(res), Reservation.class)
+		.retrieve()
+		.bodyToMono(Reservation.class)
+		.block();
+		
+		System.out.println("Reservation updated!");
+		
+	}
+	
+	private void printVacation(Vacation vac) {
+		System.out.println("Vacation ID: " + vac.getId());
+		System.out.println("Vacation Location: " + vac.getDestination());
+		System.out.println("Vacation Date: " + vac.getStartTime());
+		System.out.println("Vacation End time: " + vac.getEndTime());
+		System.out.println("Vacation Status: " 
+		+ (vac.getEndTime().isBefore(LocalDateTime.now()) ? "No longer available\n" : "Open\n"));
 	}
 
 	public void register(User u) {
@@ -105,33 +145,23 @@ public class UserService {
 	}
 	
 
-	public Mono<Activity> addActivity(String Id) {
+	public Mono<Activity> addActivity(String username, UUID id, Activity act) {
 		WebClient webClient = WebClient.create();
-		 
-		Mono<Activity> act = getActivityById(Id);
 
 		return webClient.post()
-				.uri("http://localhost:8080/activities")
-				.body(act, Activity.class)
-				.exchangeToMono(r ->  {
-				for (String key: r.cookies().keySet()) {
-					myCookies.put(key, Arrays.asList(r.cookies().get(key).get(0).getValue()));
-				}
-				return r.bodyToMono(Activity.class);				
-			});
-	}
-	
-
-	public Mono<Vacation> getVacation(User u, UUID id) {
-		WebClient webClient = WebClient.create();
-		String uri = "http://localhost:8080/users/"+u.getUsername()+"/vacations/"+id;
-		Mono<Vacation> res = webClient.get()
-				.uri(uri)
+				.uri("http://localhost:8080/users/"+username+"/vacations/"+id.toString()+"/activities")
+				.body(Mono.just(act), Activity.class)
 				.cookies(cookies -> cookies.addAll(myCookies))
-				.exchangeToMono(v -> {
-					return v.bodyToMono(Vacation.class);
+				.exchangeToMono(r ->{
+					if (r.statusCode().is2xxSuccessful()) {
+						System.out.println("Activity Added");
+						return r.bodyToMono(Activity.class);
+					}
+					else {
+						System.out.println("Error adding activity. Please try again.");
+						return Mono.empty();
+					}
 				});
-		return res;
 	}
 
 
@@ -144,7 +174,6 @@ public class UserService {
 				.cookies(cookies -> cookies.addAll(myCookies))
 				.retrieve()
 				.bodyToFlux(Car.class);
-		res.subscribe(c -> System.out.println(c));
 		return res;
 	}
 	
@@ -183,7 +212,6 @@ public class UserService {
 				.cookies(cookies -> cookies.addAll(myCookies))
 				.retrieve()
 				.bodyToFlux(Flight.class);
-		res.subscribe(f -> System.out.println(f));
 		return res;
 	}
 	
@@ -196,19 +224,7 @@ public class UserService {
 				.cookies(cookies -> cookies.addAll(myCookies))
 				.retrieve()
 				.bodyToFlux(Hotel.class);
-		res.subscribe(h -> System.out.println(h));
 		return res;
-	}
-
-	public void addReservation(Reservation r) {
-		WebClient webClient = WebClient.create();
-		webClient.post()
-				.uri("http://localhost:8080/reservations/")
-				.cookies(cookies -> cookies.addAll(myCookies))
-				.body(Mono.just(r),Reservation.class)
-				.retrieve()
-				.bodyToMono(Reservation.class)
-				.subscribe();
 	}
 
 	
