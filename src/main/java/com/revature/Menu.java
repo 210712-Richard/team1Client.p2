@@ -149,6 +149,10 @@ public class Menu {
 			case "6":
 				confirmReservationMenu();
 				break;
+			
+			case "7":
+				rescheduleReservationStaffMenu();
+				break;
 			}
 		}
 	}
@@ -158,7 +162,8 @@ public class Menu {
 		System.out.println("Welcome, " + loggedUser.getUsername() + "\n" + "1: Create a new Vacation\n"
 				+ "2: Edit a vacation\n" + "3: Go on a vacation!\n" + "4: Logout\n" + "5: Delete Account\n");
 		if (!loggedUser.getType().equals(UserType.VACATIONER)) {
-			System.out.println("6: confirm a reservation]n");
+			System.out.println("6: Confirm a reservation");
+			System.out.println("7. Reschedule a Reservation");
 		}
 		return scan.nextLine().trim();
 	}
@@ -372,9 +377,10 @@ public class Menu {
 		// VERY COMPLEX
 		// With one choice for each reservation in the selected vacation,
 		// each choice with allow the user to edit its corresponding reservation
+		vac = us.getVacation(loggedUser, vac.getId()).block();
 		Reservation selection = null;
 		while(selection == null) {
-			System.out.println("Please Choose a Reservation from Below:");
+			System.out.println("Please Choose a Reservation from Below:\n");
 			int i = 1;
 			for (Reservation res : vac.getReservations()) {
 				System.out.println(i + ". " + res.getReservedName() +" at " + res.getStartTime());
@@ -382,6 +388,7 @@ public class Menu {
 				System.out.println("Cost: " + res.getCost());
 				System.out.println("Status: " + res.getStatus());
 				System.out.println();
+				i++;
 			}
 			System.out.println("Please select which one to reschedule");
 			int select = Integer.parseInt(scan.nextLine().trim());
@@ -392,21 +399,44 @@ public class Menu {
 			}
 		}
 		
+		rescheduleReservation(selection, vac.getDestination());
+	}
+	
+	private void rescheduleReservationStaffMenu() {
+		Flux<Reservation> resFlux = us.getReservationsByType();
+		Flux<Tuple2<Long, Reservation>> listFlux = resFlux.index();
+		
+		listFlux.subscribe(t -> {
+			Long i = t.getT1() + 1;
+			Reservation res = t.getT2();
+			System.out.println(i + ". " + res.getReservedName() +" at " + res.getStartTime());
+			System.out.println("Duration (in days): " + res.getDuration());
+			System.out.println("Cost: " + res.getCost());
+			System.out.println("Status: " + res.getStatus());
+			System.out.println();
+		});
+		Long select = Long.parseLong(scan.nextLine().trim());
+		Reservation selection = listFlux.filter(t -> t.getT1() == select-1).blockFirst().getT2();
+		rescheduleReservation(selection, null);
+	}
+	
+	private void rescheduleReservation(Reservation selection, String destination) {
 		boolean isValid = false;
 		Reservation update = new Reservation();
 		while (!isValid) {
-			if (selection.getType().equals(ReservationType.FLIGHT)){
+			if (selection.getType().equals(ReservationType.FLIGHT) 
+					&& loggedUser.getType().equals(UserType.VACATIONER)){
 				try {
-					Flux<Flight> flights = us.getFlights(vac.getDestination());
+					Flux<Flight> flights = us.getFlights(destination);
 	
 					Flux<Tuple2<Long, Flight>> flightsOrdered = flights.index();
 					flightsOrdered.subscribe(f -> {
-						System.out.println((f.getT1() + 1) + ": buy a seat on an " + f.getT2().getAirline() + " flight for "
+						System.out.println((f.getT1() + 1) + ": Buy a seat on an " + f.getT2().getAirline() + " flight for "
 								+ f.getT2().getTicketPrice());
 					});
 					Long choiceIndex = Long.parseLong(scan.nextLine().trim());
 					Flight choice = flightsOrdered.filter(t -> t.getT1().equals(choiceIndex - 1)).blockFirst().getT2();
-					if (choice.getId().equals(selection.getId())) {
+					if (choice.getId().equals(selection.getReservedId())) {
 						System.out.println("That is the same flight. Please choose a different flight.");
 					} else {
 						update.setReservedId(choice.getId());
@@ -422,8 +452,11 @@ public class Menu {
 				String date = scan.nextLine().trim();
 				System.out.println("Please enter a new start time for this reservation (HH:MM): ");
 				String time = scan.nextLine().trim();
-				System.out.println("Please enter how many days the reservation will be for: ");
-				String duration = scan.nextLine().trim();
+				String duration = "0";
+				if (!selection.getType().equals(ReservationType.FLIGHT)) {
+					System.out.println("Please enter how many days the reservation will be for: ");
+					duration = scan.nextLine().trim();
+				}
 				
 				try {
 					LocalDate localDate = LocalDate.parse(date);
@@ -431,7 +464,7 @@ public class Menu {
 					LocalDateTime newStartTime = LocalDateTime.of(localDate, localTime);
 					int newDuration = Integer.parseInt(duration);
 					
-					if (newDuration <= 0) {
+					if (newDuration <= 0 && !selection.getType().equals(ReservationType.FLIGHT)) {
 						throw new Exception();
 					}
 					update.setStartTime(newStartTime);

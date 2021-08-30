@@ -266,7 +266,7 @@ public class UserService {
 		.cookies(cookies -> cookies.addAll(myCookies))
 		.exchangeToMono(r -> {
 			if (r.statusCode().is2xxSuccessful()) {
-				System.out.println("Reservation added successfully");
+				System.out.println("Reservation changed successfully");
 				return r.bodyToMono(Reservation.class);
 			} else if (r.statusCode().equals(HttpStatus.CONFLICT)) {
 				System.out.println("The reservations are maxed out for that time block.");
@@ -275,6 +275,20 @@ public class UserService {
 			}
 			return Mono.empty();
 		});
+	}
+	
+	public Flux<Reservation> getReservationsByType(){
+		WebClient webClient = WebClient.create();
+		return webClient.get()
+				.uri("http://localhost:8080/reservations")
+				.cookies(cookies -> cookies.addAll(myCookies))
+				.exchangeToFlux(r -> {
+					if (r.statusCode().is2xxSuccessful()) {
+						return r.bodyToFlux(Reservation.class);
+					} else {
+						return Flux.empty();
+					}
+				});
 	}
 
 
