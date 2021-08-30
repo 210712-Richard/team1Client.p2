@@ -151,8 +151,12 @@ public class Menu {
 					return;
 				}
 				break;
-			default: System.out.println("Invalid input. Try again");
 				continue;
+			case "6":
+				rescheduleReservationStaffMenu();
+				break;
+      default: System.out.println("Invalid input. Try again");
+      contitnue;
 			}
 		}
 	}
@@ -199,6 +203,8 @@ public class Menu {
 		
 		System.out.println("4: Logout");
 		System.out.println("5: Delete Account");
+    System.out.println("6. Reschedule a Reservation");
+
 		return scan.nextLine().trim();
 	}
 
@@ -281,7 +287,7 @@ public class Menu {
 				addActivityMenu(v);
 				break;
 			case "5":
-				rescheduleReservationMenu();
+				rescheduleReservationVacationerMenu(v);
 				break;
 			case "6":
 				return;
@@ -298,11 +304,6 @@ public class Menu {
 						+ "3: Book a flight\n" + "4: Plan an activity\n" + "5: Reschedule\n" + "6: Back");
 		return scan.nextLine().trim();
 	}
-	
-	
-	
-
-	
 
 	private void addCar(Vacation v) {
 		Flux<Car> cars = us.getCars(v.getDestination());
@@ -320,7 +321,7 @@ public class Menu {
 		r.setVacationId(v.getId());
 		r.setUsername(loggedUser.getUsername());
 		r.setReservedName(choice.getMake() + " " + choice.getModel());
-		r.setStarttime(v.getStartTime());
+		r.setStartTime(v.getStartTime());
 		r.setCost(choice.getCostPerDay());
 		r.setDuration(v.getDuration());
 		r.setStatus(ReservationStatus.AWAITING);
@@ -344,7 +345,7 @@ public class Menu {
 		r.setVacationId(v.getId());
 		r.setUsername(loggedUser.getUsername());
 		r.setReservedName(choice.getName());
-		r.setStarttime(v.getStartTime());
+		r.setStartTime(v.getStartTime());
 		r.setCost(choice.getCostPerNight());
 		r.setDuration(v.getDuration());
 		r.setStatus(ReservationStatus.AWAITING);
@@ -368,7 +369,7 @@ public class Menu {
 		r.setVacationId(v.getId());
 		r.setUsername(loggedUser.getUsername());
 		r.setReservedName(choice.getAirline());
-		r.setStarttime(v.getStartTime());
+		r.setStartTime(v.getStartTime());
 		r.setCost(choice.getTicketPrice());
 		r.setDuration(v.getDuration());
 		r.setStatus(ReservationStatus.AWAITING);
@@ -380,9 +381,6 @@ public class Menu {
 		
 		addActivity(v);
 	}
-	
-						
-		
 
 	private Boolean addActivity(Vacation vac) {
 		// COMPLEX
@@ -403,14 +401,113 @@ public class Menu {
 				.map(a -> true)
 				.switchIfEmpty(Mono.just(false))
 				.block();
-		
-
 	}
 
-	private void rescheduleReservationMenu() {
+	private void rescheduleReservationVacationerMenu(Vacation vac) {
 		// VERY COMPLEX
 		// With one choice for each reservation in the selected vacation,
 		// each choice with allow the user to edit its corresponding reservation
+		vac = us.getVacation(loggedUser, vac.getId()).block();
+		Reservation selection = null;
+		while(selection == null) {
+			System.out.println("Please Choose a Reservation from Below:\n");
+			int i = 1;
+			for (Reservation res : vac.getReservations()) {
+				System.out.println(i + ". " + res.getReservedName() +" at " + res.getStartTime());
+				System.out.println("Duration (in days): " + res.getDuration());
+				System.out.println("Cost: " + res.getCost());
+				System.out.println("Status: " + res.getStatus());
+				System.out.println();
+				i++;
+			}
+			System.out.println("Please select which one to reschedule");
+			int select = Integer.parseInt(scan.nextLine().trim());
+			if (select <= 0 || select > vac.getReservations().size()) {
+				System.out.println("That selection is invalid. Please try again.");
+			} else {
+				selection = vac.getReservations().get(select-1);
+			}
+		}
+		
+		rescheduleReservation(selection, vac.getDestination());
+	}
+	
+	private void rescheduleReservationStaffMenu() {
+		Flux<Reservation> resFlux = us.getReservationsByType();
+		Flux<Tuple2<Long, Reservation>> listFlux = resFlux.index();
+		
+		listFlux.subscribe(t -> {
+			Long i = t.getT1() + 1;
+			Reservation res = t.getT2();
+			System.out.println(i + ". " + res.getReservedName() +" at " + res.getStartTime());
+			System.out.println("Duration (in days): " + res.getDuration());
+			System.out.println("Cost: " + res.getCost());
+			System.out.println("Status: " + res.getStatus());
+			System.out.println();
+		});
+		Long select = Long.parseLong(scan.nextLine().trim());
+		Reservation selection = listFlux.filter(t -> t.getT1() == select-1).blockFirst().getT2();
+		rescheduleReservation(selection, null);
+	}
+	
+	private void rescheduleReservation(Reservation selection, String destination) {
+		boolean isValid = false;
+		Reservation update = new Reservation();
+		while (!isValid) {
+			if (selection.getType().equals(ReservationType.FLIGHT) 
+					&& loggedUser.getType().equals(UserType.VACATIONER)){
+				try {
+					Flux<Flight> flights = us.getFlights(destination);
+	
+					Flux<Tuple2<Long, Flight>> flightsOrdered = flights.index();
+					flightsOrdered.subscribe(f -> {
+						System.out.println((f.getT1() + 1) + ": Buy a seat on an " + f.getT2().getAirline() + " flight for "
+								+ f.getT2().getTicketPrice());
+					});
+					Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+					Flight choice = flightsOrdered.filter(t -> t.getT1().equals(choiceIndex - 1)).blockFirst().getT2();
+					if (choice.getId().equals(selection.getReservedId())) {
+						System.out.println("That is the same flight. Please choose a different flight.");
+					} else {
+						update.setReservedId(choice.getId());
+						isValid = true;
+					}
+				} catch (Exception e) {
+					System.out.println("Error with your selection. Please try again.");
+				}
+						
+			} else {
+				System.out.println("Please enter a new start date for this reservation (YYYY-MM-DD): ");
+				String date = scan.nextLine().trim();
+				System.out.println("Please enter a new start time for this reservation (HH:MM): ");
+				String time = scan.nextLine().trim();
+				String duration = "0";
+				if (!selection.getType().equals(ReservationType.FLIGHT)) {
+					System.out.println("Please enter how many days the reservation will be for: ");
+					duration = scan.nextLine().trim();
+				}
+				
+				try {
+					LocalDate localDate = LocalDate.parse(date);
+					LocalTime localTime = LocalTime.parse(time);
+					LocalDateTime newStartTime = LocalDateTime.of(localDate, localTime);
+					int newDuration = Integer.parseInt(duration);
+					
+					if (newDuration <= 0 && !selection.getType().equals(ReservationType.FLIGHT)) {
+						throw new Exception();
+					}
+					update.setStartTime(newStartTime);
+					update.setDuration(newDuration);
+					isValid = true;
+					
+					
+				} catch (Exception e) {
+					System.out.println("Date, time and/or duration was invalid. Please try again.");
+				}
+			}
+		
+		}
+		us.rescheduleReservation(update, selection.getId()).subscribe();
 
 	}
 
