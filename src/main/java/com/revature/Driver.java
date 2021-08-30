@@ -5,8 +5,6 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 
-import com.revature.services.UserService;
-
 @SpringBootApplication
 public class Driver {
 	public static void main(String[] args) {
@@ -18,10 +16,8 @@ public class Driver {
 	
 	private static void testMethod(SpringApplication application, String[] args) {
 		ApplicationContext ctx = application.run(args);
-		UserService us = ctx.getBean(UserService.class);
 		Menu menu = ctx.getBean(Menu.class);
-		//us.loginAsTest();
-		//us.printAllActivities();
+
 		menu.start();
 	}
 }

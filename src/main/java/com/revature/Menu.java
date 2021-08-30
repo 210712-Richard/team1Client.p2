@@ -151,12 +151,15 @@ public class Menu {
 					return;
 				}
 				break;
-				continue;
 			case "6":
-				rescheduleReservationStaffMenu();
+				if (loggedUser.getType() != UserType.VACATIONER) {
+					rescheduleReservationStaffMenu();
+				}
+				
 				break;
-      default: System.out.println("Invalid input. Try again");
-      contitnue;
+	      default: 
+	    	  System.out.println("Invalid input. Try again");
+	    	  continue;
 			}
 		}
 	}
@@ -165,7 +168,7 @@ public class Menu {
 		reslist = new ArrayList<>();
 		us.getReservationsByType().flatMap(res -> {
 			reslist.add(res);
-			System.out.println("New reservation added. Res ID: " + res.getId());
+			System.out.println("New reservation added.");
 			return Flux.just(res);
 		}).blockLast();
 		
@@ -177,7 +180,7 @@ public class Menu {
 			reslist = new ArrayList<>();
 			us.getReservationsByType().flatMap(res -> {
 				reslist.add(res);
-				System.out.println("New reservation added. Res ID: " + res.getId());
+				System.out.println("New reservation added.");
 				return Flux.just(res);
 			}).blockLast();;
 		}
@@ -203,7 +206,10 @@ public class Menu {
 		
 		System.out.println("4: Logout");
 		System.out.println("5: Delete Account");
-    System.out.println("6. Reschedule a Reservation");
+		if(loggedUser.getType() != UserType.VACATIONER) {
+			System.out.println("6. Reschedule a Reservation");
+		}
+    
 
 		return scan.nextLine().trim();
 	}
@@ -288,7 +294,7 @@ public class Menu {
 				break;
 			case "5":
 				rescheduleReservationVacationerMenu(v);
-				break;
+				return;
 			case "6":
 				return;
 			}
@@ -580,7 +586,7 @@ public class Menu {
 		}
 		
 		if(selection == vaclist.size() + 1) // Quit menu
-			loginMenuInput();
+			return;
 		else
 			modifyReservationsMenuInput(vaclist.get(selection - 1).getReservations());
 	}
@@ -850,33 +856,4 @@ public class Menu {
 	}
 
 }
-
-
-//	1: Register Done
-//	2: Login Done
-//		(IF STAFF) Change reservation status Stephen
-//			(Displays all reservations)
-//			Select one to view
-//				Confirm
-//		1: Create Vacation Michael
-//		2: Edit Vacation
-//			(Displays all reservations made)
-//			1: Reserve a car Done
-//			2: Book a hotel Done
-//			3: Book a flight Done
-//			4: Add an activity Elizabeth
-//				Select a location
-//					(Displays all Activities at that location)
-//					Select an activity 
-//			5: edit an existing reservation 
-//				(Displays all reservations on that vacation)
-//				1: Reschedule the reservation Michael
-//				2: Cancel the reservation Stephen
-//		3. Complete Reservation Stephen
-//			1. Checkout of hotel
-//			2. Return Car
-//		4: Logout Done
-//		5: Delete account Kyle
-//	3: Quit
-
 

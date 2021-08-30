@@ -17,7 +17,6 @@ import com.revature.beans.Flight;
 import com.revature.beans.Hotel;
 import com.revature.beans.Reservation;
 import com.revature.beans.User;
-import com.revature.beans.UserType;
 import com.revature.beans.Vacation;
 
 import reactor.core.publisher.Flux;
@@ -113,7 +112,7 @@ public class UserService {
 		String baseUrl = "http://localhost:8080";
 		WebClient webClient = WebClient.builder().baseUrl(baseUrl).build();
 			
-		Reservation updatedRes = webClient.put()
+		webClient.put()
 		.uri(uriBuilder -> uriBuilder
 				.path("/reservations/{resId}/status")
 				.build(res.getId()))
@@ -170,7 +169,6 @@ public class UserService {
 	public Flux<Car> getCars(String destination) {
 		WebClient webClient = WebClient.create();
 		String uri = "http://localhost:8080/cars/"+destination;
-		System.out.println(uri);
 		Flux<Car> res = webClient.get()
 				.uri(uri)
 				.cookies(cookies -> cookies.addAll(myCookies))
@@ -208,7 +206,6 @@ public class UserService {
 	public Flux<Flight> getFlights(String destination) {
 		WebClient webClient = WebClient.create();
 		String uri = "http://localhost:8080/flights/"+destination;
-		System.out.println(uri);
 		Flux<Flight> res = webClient.get()
 				.uri(uri)
 				.cookies(cookies -> cookies.addAll(myCookies))
@@ -220,7 +217,6 @@ public class UserService {
 	public Flux<Hotel> getHotels(String destination) {
 		WebClient webClient = WebClient.create();
 		String uri = "http://localhost:8080/hotels/"+destination;
-		System.out.println(uri);
 		Flux<Hotel> res = webClient.get()
 				.uri(uri)
 				.cookies(cookies -> cookies.addAll(myCookies))
@@ -290,16 +286,6 @@ public class UserService {
 						return Flux.empty();
 					}
 				});
-	}
-
-	public Flux<Reservation> getReservationsByType() {
-		WebClient webClient = WebClient.create();
-		String uri = "http://localhost:8080/reservations/";
-		return webClient.get()
-				.uri(uri)
-				.cookies(cookies -> cookies.addAll(myCookies))
-				.retrieve()
-				.bodyToFlux(Reservation.class);
 	}
 
 
