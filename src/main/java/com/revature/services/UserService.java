@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -254,6 +255,25 @@ public class UserService {
 				System.out.println("Error creating vacation. Please try again");
 				return Mono.just(new Vacation());
 			}
+		});
+	}
+	
+	public Mono<Reservation> rescheduleReservation(Reservation update, UUID id){
+		WebClient webClient = WebClient.create();
+		return webClient.patch()
+		.uri("http://localhost:8080/reservations/" + id.toString())
+		.body(Mono.just(update), Reservation.class)
+		.cookies(cookies -> cookies.addAll(myCookies))
+		.exchangeToMono(r -> {
+			if (r.statusCode().is2xxSuccessful()) {
+				System.out.println("Reservation added successfully");
+				return r.bodyToMono(Reservation.class);
+			} else if (r.statusCode().equals(HttpStatus.CONFLICT)) {
+				System.out.println("The reservations are maxed out for that time block.");
+			} else {
+				System.out.println("Error with your reservation. Please try again.");
+			}
+			return Mono.empty();
 		});
 	}
 

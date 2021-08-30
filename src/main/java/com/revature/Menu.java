@@ -242,7 +242,7 @@ public class Menu {
 				addActivityMenu(v);
 				break;
 			case "5":
-				rescheduleReservationMenu();
+				rescheduleReservationVacationerMenu(v);
 				break;
 			case "6":
 				return;
@@ -281,7 +281,7 @@ public class Menu {
 		r.setVacationId(v.getId());
 		r.setUsername(loggedUser.getUsername());
 		r.setReservedName(choice.getMake() + " " + choice.getModel());
-		r.setStarttime(v.getStartTime());
+		r.setStartTime(v.getStartTime());
 		r.setCost(choice.getCostPerDay());
 		r.setDuration(v.getDuration());
 		r.setStatus(ReservationStatus.AWAITING);
@@ -305,7 +305,7 @@ public class Menu {
 		r.setVacationId(v.getId());
 		r.setUsername(loggedUser.getUsername());
 		r.setReservedName(choice.getName());
-		r.setStarttime(v.getStartTime());
+		r.setStartTime(v.getStartTime());
 		r.setCost(choice.getCostPerNight());
 		r.setDuration(v.getDuration());
 		r.setStatus(ReservationStatus.AWAITING);
@@ -329,7 +329,7 @@ public class Menu {
 		r.setVacationId(v.getId());
 		r.setUsername(loggedUser.getUsername());
 		r.setReservedName(choice.getAirline());
-		r.setStarttime(v.getStartTime());
+		r.setStartTime(v.getStartTime());
 		r.setCost(choice.getTicketPrice());
 		r.setDuration(v.getDuration());
 		r.setStatus(ReservationStatus.AWAITING);
@@ -368,10 +368,84 @@ public class Menu {
 
 	}
 
-	private void rescheduleReservationMenu() {
+	private void rescheduleReservationVacationerMenu(Vacation vac) {
 		// VERY COMPLEX
 		// With one choice for each reservation in the selected vacation,
 		// each choice with allow the user to edit its corresponding reservation
+		Reservation selection = null;
+		while(selection == null) {
+			System.out.println("Please Choose a Reservation from Below:");
+			int i = 1;
+			for (Reservation res : vac.getReservations()) {
+				System.out.println(i + ". " + res.getReservedName() +" at " + res.getStartTime());
+				System.out.println("Duration (in days): " + res.getDuration());
+				System.out.println("Cost: " + res.getCost());
+				System.out.println("Status: " + res.getStatus());
+				System.out.println();
+			}
+			System.out.println("Please select which one to reschedule");
+			int select = Integer.parseInt(scan.nextLine().trim());
+			if (select <= 0 || select > vac.getReservations().size()) {
+				System.out.println("That selection is invalid. Please try again.");
+			} else {
+				selection = vac.getReservations().get(select-1);
+			}
+		}
+		
+		boolean isValid = false;
+		Reservation update = new Reservation();
+		while (!isValid) {
+			if (selection.getType().equals(ReservationType.FLIGHT)){
+				try {
+					Flux<Flight> flights = us.getFlights(vac.getDestination());
+	
+					Flux<Tuple2<Long, Flight>> flightsOrdered = flights.index();
+					flightsOrdered.subscribe(f -> {
+						System.out.println((f.getT1() + 1) + ": buy a seat on an " + f.getT2().getAirline() + " flight for "
+								+ f.getT2().getTicketPrice());
+					});
+					Long choiceIndex = Long.parseLong(scan.nextLine().trim());
+					Flight choice = flightsOrdered.filter(t -> t.getT1().equals(choiceIndex - 1)).blockFirst().getT2();
+					if (choice.getId().equals(selection.getId())) {
+						System.out.println("That is the same flight. Please choose a different flight.");
+					} else {
+						update.setReservedId(choice.getId());
+						isValid = true;
+					}
+				} catch (Exception e) {
+					System.out.println("Error with your selection. Please try again.");
+				}
+				
+				
+			} else {
+				System.out.println("Please enter a new start date for this reservation (YYYY-MM-DD): ");
+				String date = scan.nextLine().trim();
+				System.out.println("Please enter a new start time for this reservation (HH:MM): ");
+				String time = scan.nextLine().trim();
+				System.out.println("Please enter how many days the reservation will be for: ");
+				String duration = scan.nextLine().trim();
+				
+				try {
+					LocalDate localDate = LocalDate.parse(date);
+					LocalTime localTime = LocalTime.parse(time);
+					LocalDateTime newStartTime = LocalDateTime.of(localDate, localTime);
+					int newDuration = Integer.parseInt(duration);
+					
+					if (newDuration <= 0) {
+						throw new Exception();
+					}
+					update.setStartTime(newStartTime);
+					update.setDuration(newDuration);
+					isValid = true;
+					
+					
+				} catch (Exception e) {
+					System.out.println("Date, time and/or duration was invalid. Please try again.");
+				}
+			}
+		
+		}
+		us.rescheduleReservation(update, selection.getId()).subscribe();
 
 	}
 
@@ -458,7 +532,7 @@ public class Menu {
 		for (int i = 0; i < v.getReservations().size(); i++) {
 			System.out.println(i + 1 + ": Reservation ID: " + v.getReservations().get(i).getId() + "\n\tName: "
 					+ v.getReservations().get(i).getReservedName() + "\n\tType: " + v.getReservations().get(i).getType()
-					+ "\n\tTime: " + v.getReservations().get(i).getStarttime() + "\n\tStatus: "
+					+ "\n\tTime: " + v.getReservations().get(i).getStartTime() + "\n\tStatus: "
 					+ v.getReservations().get(i).getStatus());
 		}
 
